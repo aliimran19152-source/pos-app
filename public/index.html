@@ -23,6 +23,7 @@
     .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
     .mobile-header { background-color: var(--primary-color); color: white; padding: 10px 15px; }
     .multi-entry-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+    .img-preview { max-height: 80px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -200,8 +201,8 @@
             </div>
             <div class="table-responsive">
               <table class="table table-hover table-bordered text-center align-middle" style="font-size: 13px;">
-                <thead class="table-dark"><tr><th>Date</th><th>Bill #</th><th>Type</th><th>Amount</th><th>Action</th></tr></thead>
-                <tbody id="partyLedgerBody"><tr><td colspan="5" class="text-muted">Search customer/supplier above.</td></tr></tbody>
+                <thead class="table-dark"><tr><th>Date</th><th>Bill #</th><th>Type</th><th>Amount</th><th>Bill Pic</th><th>Action</th></tr></thead>
+                <tbody id="partyLedgerBody"><tr><td colspan="6" class="text-muted">Search customer/supplier above.</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -237,7 +238,7 @@
   </div>
 </div>
 
-<!-- ENTRY MODAL -->
+<!-- ENTRY MODAL WITH BILL IMAGE ATTACHMENT -->
 <div class="modal fade" id="entryModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -290,6 +291,13 @@
             </div>
           </div>
 
+          <!-- BILL PICTURE ATTACHMENT FIELD -->
+          <div class="mb-2">
+            <label class="form-label small fw-bold"><i class="fa-solid fa-camera me-1"></i> Attach Bill Picture (Optional)</label>
+            <input type="file" id="entryBillImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event)">
+            <img id="billImgPreview" class="img-preview d-none" alt="Bill Preview">
+          </div>
+
           <div class="mb-3">
             <label class="form-label small fw-bold">Notes</label>
             <input type="text" id="entryNotes" class="form-control form-control-sm" placeholder="Optional details">
@@ -302,7 +310,7 @@
   </div>
 </div>
 
-<!-- ADD PARTY MODAL -->
+<!-- ADD PARTY MODAL WITH PURANA KHATA / OPENING BALANCE -->
 <div class="modal fade" id="addPartyModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -317,12 +325,44 @@
             <label class="form-label small fw-bold">Name</label>
             <input type="text" id="partyNameInput" class="form-control" placeholder="Full Name" required>
           </div>
-          <div class="mb-3">
+          <div class="mb-2">
             <label class="form-label small fw-bold">Phone Number</label>
             <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
           </div>
+          
+          <!-- PURANA KHATA / OPENING BALANCE FEATURE -->
+          <div class="p-2 border rounded bg-light mb-3">
+            <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-book-open me-1"></i> Purana Khaya / Opening Balance</label>
+            <div class="row g-2">
+              <div class="col-7">
+                <input type="number" id="partyOpeningBal" class="form-control form-control-sm" placeholder="Amount (Rs. 0)">
+              </div>
+              <div class="col-5">
+                <select id="partyOpeningType" class="form-select form-select-sm fw-bold">
+                  <option value="RECEIVABLE">Lene hain (Due)</option>
+                  <option value="PAYABLE">Dene hain (Payable)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <button type="submit" id="savePartyBtn" class="btn btn-success w-100 fw-bold">Save Party</button>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW BILL PICTURE MODAL -->
+<div class="modal fade" id="viewImgModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-2">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="fw-bold mb-0">Original Attached Bill</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img id="modalBillImage" src="" class="img-fluid rounded border" alt="Attached Bill">
       </div>
     </div>
   </div>
@@ -334,6 +374,7 @@
   let currentUser = null;
   let userTransactions = [];
   let userParties = [];
+  let currentBillBase64 = "";
   let mainChart = null, methodChart = null;
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -483,9 +524,26 @@
     document.getElementById("authScreen").classList.remove("d-none");
   }
 
+  function previewBillImage(event) {
+    let file = event.target.files[0];
+    if (file) {
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        currentBillBase64 = e.target.result;
+        let img = document.getElementById("billImgPreview");
+        img.src = currentBillBase64;
+        img.classList.remove("d-none");
+      }
+      reader.readAsDataURL(file);
+    }
+  }
+
   function openEntryModal() {
     resetMultiRows();
     updatePartySuggestions();
+    currentBillBase64 = "";
+    document.getElementById("billImgPreview").classList.add("d-none");
+    document.getElementById("entryBillImg").value = "";
     new bootstrap.Modal(document.getElementById('entryModal')).show();
   }
 
@@ -574,15 +632,42 @@
     let role = document.getElementById("partyRoleInput").value;
     let rawName = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
     let phone = document.getElementById("partyPhoneInput").value.trim();
+    let openingBal = parseFloat(document.getElementById("partyOpeningBal").value) || 0;
+    let openingType = document.getElementById("partyOpeningType").value;
 
     let existing = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
     if(!existing) {
       userParties.push({ id: Date.now(), role, name: rawName, phone });
+
+      // Save Opening Balance as Initial Transaction
+      if (openingBal > 0) {
+        let txType = "";
+        if (role === "Customer") {
+          txType = openingType === "RECEIVABLE" ? "SALE_CREDIT" : "PAYMENT_REC";
+        } else {
+          txType = openingType === "PAYABLE" ? "PURCHASE_CREDIT" : "PAYMENT_PAID";
+        }
+
+        userTransactions.push({
+          id: Date.now() + 1,
+          role,
+          name: rawName,
+          billNo: "OPENING-BAL",
+          type: txType,
+          amount: openingBal,
+          method: "Cash",
+          date: new Date().toISOString().split('T')[0],
+          notes: "Purana Bakaya / Opening Balance Entry",
+          img: ""
+        });
+      }
+
       await saveToServer();
     }
 
     bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
     document.getElementById("addPartyForm").reset();
+    refreshDashboard();
     renderPartiesTables();
   }
 
@@ -618,7 +703,7 @@
       let amount = parseFloat(rowAmounts[index].value) || 0;
 
       if (amount > 0) {
-        let tx = { id: Date.now() + Math.random(), role, name, billNo, type, amount, method, date, notes };
+        let tx = { id: Date.now() + Math.random(), role, name, billNo, type, amount, method, date, notes, img: currentBillBase64 };
         userTransactions.push(tx);
       }
     });
@@ -772,7 +857,7 @@
     let tbody = document.getElementById("partyLedgerBody");
 
     if (!query) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Search customer/supplier above.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">Search customer/supplier above.</td></tr>`;
       document.getElementById("selectedPartyName").innerText = "Select a Party";
       document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
       return;
@@ -785,7 +870,7 @@
     });
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No transactions found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found.</td></tr>`;
       return;
     }
 
@@ -796,12 +881,15 @@
       if (t.type === "SALE_CREDIT" || t.type === "PURCHASE_CREDIT") netBalance += t.amount;
       else netBalance -= t.amount;
 
+      let picBtn = t.img ? `<button class="btn btn-sm btn-outline-info" onclick="viewBillPic('${t.id}')"><i class="fa-solid fa-image"></i> Pic</button>` : `<span class="text-muted small">No Pic</span>`;
+
       rows += `
         <tr>
           <td>${t.date}</td>
           <td>${t.billNo}</td>
           <td><span class="badge bg-secondary">${t.type}</span></td>
           <td class="fw-bold">Rs. ${t.amount.toLocaleString()}</td>
+          <td>${picBtn}</td>
           <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
       `;
@@ -809,6 +897,14 @@
 
     tbody.innerHTML = rows;
     document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
+  }
+
+  function viewBillPic(id) {
+    let tx = userTransactions.find(t => t.id == id);
+    if (tx && tx.img) {
+      document.getElementById("modalBillImage").src = tx.img;
+      new bootstrap.Modal(document.getElementById('viewImgModal')).show();
+    }
   }
 
   async function deleteTx(id) {

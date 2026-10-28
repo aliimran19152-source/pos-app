@@ -7,7 +7,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+// Increased limit to 10mb for image uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -15,7 +17,7 @@ if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// User Register & Create User File
+// User Register
 app.post('/api/register', (req, res) => {
     const { phone, pass, bizName } = req.body;
     if (!phone || !pass) return res.status(400).json({ error: "Phone and password required" });
@@ -35,7 +37,7 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true, user: userData.profile });
 });
 
-// User Login & Load Data
+// User Login
 app.post('/api/login', (req, res) => {
     const { phone, pass } = req.body;
     const filePath = path.join(DATA_DIR, `${phone}.json`);
@@ -52,7 +54,7 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true, data: userData });
 });
 
-// Sync / Update User File Data
+// Sync / Update Data with Pictures & Opening Balances
 app.post('/api/save-data', (req, res) => {
     const { phone, transactions, parties } = req.body;
     const filePath = path.join(DATA_DIR, `${phone}.json`);
