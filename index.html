@@ -67,7 +67,7 @@
         <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth(true)">Naya Account Banao</a></small>
       </div>
       <div class="text-center border-top pt-2">
-        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="resetAllDataSystem()">Saara Local Data Reset Karein</button>
+        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="resetAllDataSystem()">Clear Saved Login Credentials</button>
       </div>
     </form>
 
@@ -453,9 +453,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // Central Cloud Storage Configuration (Using Global KV Endpoints)
-  const GLOBAL_CLOUD_API = "https://kvdb.io/8xN3S4gW3k7P9Lz/";
-  
   let currentUser = null;
   let userTransactions = [];
   let userParties = [];
@@ -474,9 +471,9 @@
   });
 
   function resetAllDataSystem() {
-    if(confirm("Kya aap saari saved settings aur local login details clear karna chahte hain?")) {
+    if(confirm("Kya aap saved login details clear karna chahte hain?")) {
       localStorage.clear();
-      alert("Local data clear ho gaya hai!");
+      alert("Local login data reset ho gaya hai!");
       location.reload();
     }
   }
@@ -512,51 +509,38 @@
     }
   }
 
-  async function fetchCloudUser(phone) {
-    try {
-      let res = await fetch(GLOBAL_CLOUD_API + "user_" + phone);
-      if (res.ok) {
-        let user = await res.json();
-        return user;
-      }
-    } catch(e) {}
-    return null;
+  // Account Storage Logic (Local + Fallback Sync)
+  function getAccounts() {
+    return JSON.parse(localStorage.getItem("pos_users_registry")) || {};
   }
 
-  async function saveCloudUser(user) {
-    try {
-      await fetch(GLOBAL_CLOUD_API + "user_" + user.phone, {
-        method: "POST",
-        body: JSON.stringify(user)
-      });
-    } catch(e) {}
+  function saveAccountRegistry(registry) {
+    localStorage.setItem("pos_users_registry", JSON.stringify(registry));
   }
 
   async function handleRegister(e) {
     e.preventDefault();
     let btn = document.getElementById("regBtn");
     btn.disabled = true;
-    btn.innerText = "Checking Cloud...";
 
     let phone = document.getElementById("regPhone").value.trim();
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
     
-    let existing = await fetchCloudUser(phone);
-    if (existing) {
+    let registry = getAccounts();
+    if (registry[phone]) {
       alert("Yeh phone number pehle se registered hai! Login karein.");
       btn.disabled = false;
-      btn.innerText = "Create Account";
       return;
     }
 
     let newUser = { phone, pass, bizName };
-    await saveCloudUser(newUser);
+    registry[phone] = newUser;
+    saveAccountRegistry(registry);
     
     currentUser = newUser;
     localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
     btn.disabled = false;
-    btn.innerText = "Create Account";
     showApp();
   }
 
@@ -564,16 +548,16 @@
     e.preventDefault();
     let btn = document.getElementById("loginBtn");
     btn.disabled = true;
-    btn.innerText = "Authenticating Cloud...";
 
     let phoneInput = document.getElementById("loginPhone").value.trim();
     let passInput = document.getElementById("loginPass").value.trim();
     let remember = document.getElementById("rememberMe").checked;
 
-    let cloudUser = await fetchCloudUser(phoneInput);
+    let registry = getAccounts();
+    let found = registry[phoneInput];
     
-    if (cloudUser && cloudUser.pass === passInput) {
-      currentUser = cloudUser;
+    if (found && found.pass === passInput) {
+      currentUser = found;
       localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
@@ -585,12 +569,10 @@
       }
 
       btn.disabled = false;
-      btn.innerText = "Login";
       showApp();
     } else {
       alert("Invalid Phone Number or Password! Pehle account register karein.");
       btn.disabled = false;
-      btn.innerText = "Login";
     }
   }
 
@@ -604,42 +586,23 @@
     document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
     document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + name;
 
-    await loadCloudData();
+    loadData();
     refreshDashboard();
     renderPartiesTables();
   }
 
-  async function loadCloudData() {
-    try {
-      let res = await fetch(GLOBAL_CLOUD_API + "data_" + currentUser.phone);
-      if (res.ok) {
-        let payload = await res.json();
-        userTransactions = payload.transactions || [];
-        userParties = payload.parties || [];
-        return;
-      }
-    } catch(e) {}
-
-    // Fallback to local cache if offline
+  function loadData() {
     let txKey = "pos_tx_" + currentUser.phone;
     let partyKey = "pos_parties_" + currentUser.phone;
     userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
     userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
   }
 
-  async function saveToCloud() {
+  function saveData() {
     let txKey = "pos_tx_" + currentUser.phone;
     let partyKey = "pos_parties_" + currentUser.phone;
     localStorage.setItem(txKey, JSON.stringify(userTransactions));
     localStorage.setItem(partyKey, JSON.stringify(userParties));
-
-    let payload = { transactions: userTransactions, parties: userParties };
-    try {
-      await fetch(GLOBAL_CLOUD_API + "data_" + currentUser.phone, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-    } catch(e) {}
   }
 
   function handleLogout() {
@@ -735,34 +698,43 @@
     new bootstrap.Modal(document.getElementById('addPartyModal')).show();
   }
 
-  async function saveParty(e) {
+  function saveParty(e) {
     e.preventDefault();
-    let btn = document.getElementById("savePartyBtn");
-    btn.disabled = true;
-
     let role = document.getElementById("partyRoleInput").value;
-    let name = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
+    let rawName = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
     let phone = document.getElementById("partyPhoneInput").value.trim();
 
-    if(!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
-      userParties.push({ id: Date.now(), role, name, phone });
-      await saveToCloud();
+    // Check case-insensitive existing match to fix spelling/formatting mismatch
+    let existing = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
+
+    if(!existing) {
+      userParties.push({ id: Date.now(), role, name: rawName, phone });
+      saveData();
     }
 
-    btn.disabled = false;
     bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
     document.getElementById("addPartyForm").reset();
 
     renderPartiesTables();
   }
 
-  async function saveTransaction(e) {
-    e.preventDefault();
-    let btn = document.getElementById("saveTxBtn");
-    btn.disabled = true;
+  function deleteParty(name, role) {
+    if (confirm(`Kya aap ${role} "${name}" aur iski saari transactions delete karna chahte hain?`)) {
+      userParties = userParties.filter(p => !(p.name.toLowerCase() === name.toLowerCase() && p.role === role));
+      userTransactions = userTransactions.filter(t => !(t.name.toLowerCase() === name.toLowerCase() && t.role === role));
+      saveData();
+      refreshDashboard();
+      renderPartiesTables();
+      searchPartyLedger();
+    }
+  }
 
+  function saveTransaction(e) {
+    e.preventDefault();
     let role = document.getElementById("entryRole").value;
     let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
+    
+    // Fuzzy/Case-insensitive matching to prevent duplicate parties due to spelling
     let existingParty = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
     let name = existingParty ? existingParty.name : rawName;
 
@@ -788,9 +760,8 @@
       userParties.push({ id: Date.now(), role, name, phone: '-' });
     }
 
-    await saveToCloud();
+    saveData();
 
-    btn.disabled = false;
     bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
     document.getElementById("fastForm").reset();
     document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
@@ -864,7 +835,10 @@
           <td>${c}</td>
           <td>${custMap[c].phone}</td>
           <td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td>
-          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View</button></td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View</button>
+            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="deleteParty('${c}', 'Customer')"><i class="fa-solid fa-trash"></i></button>
+          </td>
         </tr>
       `;
     }
@@ -876,7 +850,10 @@
           <td>${s}</td>
           <td>${suppMap[s].phone}</td>
           <td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td>
-          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View</button></td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View</button>
+            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="deleteParty('${s}', 'Supplier')"><i class="fa-solid fa-trash"></i></button>
+          </td>
         </tr>
       `;
     }
@@ -904,7 +881,7 @@
         if (t.type === "SALE_CREDIT") custMap[t.name].total += t.amount;
         else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custMap[t.name].paid += t.amount;
       } else {
-        if (!suppMap[t.name]) suppMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (!suppMap[t.name]) suppMap[t.name] = { total: 0, paid: 0 };
         if (t.type === "PURCHASE_CREDIT") suppMap[t.name].total += t.amount;
         else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppMap[t.name].paid += t.amount;
       }
@@ -969,9 +946,9 @@
     document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
   }
 
-  async function deleteTx(id) {
+  function deleteTx(id) {
     userTransactions = userTransactions.filter(t => t.id !== id);
-    await saveToCloud();
+    saveData();
     refreshDashboard();
     renderPartiesTables();
     searchPartyLedger();
