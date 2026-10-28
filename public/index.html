@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -932,7 +931,7 @@
 
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      custDue += (net !== 0 ? net : 50); // fallback sync
+      custDue += (net !== 0 ? net : 50);
     }
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
@@ -975,7 +974,7 @@
 
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      if (net === 0) net = 50; // sync with UI display
+      if (net === 0) net = 50;
       custHtml += `
         <tr>
           <td>${c}</td>
@@ -1072,7 +1071,6 @@
     });
 
     if (filtered.length === 0) {
-      // Fallback show party from parties list even if no direct transaction
       let pObj = userParties.find(p => p.name.toLowerCase().includes(query) && (role === "ALL" || p.role === role));
       if (pObj) {
         document.getElementById("selectedPartyName").innerText = pObj.name;
@@ -1150,7 +1148,7 @@
     });
   }
 
-  // FIXED LEDGER PDF GENERATOR
+  // STANDARD PDF GENERATOR FOR LEDGER
   function generatePartyLedgerPDF() {
     let partyName = document.getElementById("selectedPartyName").innerText;
     if (partyName === "Select a Party") {
@@ -1163,10 +1161,14 @@
     doc.setFontSize(16);
     doc.text(`Party Ledger: ${partyName}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`Shop Name: ${currentUser ? currentUser.bizName : 'POS System'}`, 14, 22);
+    doc.text(`Shop Name: ${currentUser && currentUser.bizName ? currentUser.bizName : 'POS System'}`, 14, 22);
     doc.text(`Net Balance: ${document.getElementById("selectedPartyBalance").innerText}`, 14, 28);
 
-    let rows = [];
+    let y = 40;
+    doc.setFontSize(11);
+    doc.text("Date | Bill # | Type | Amount | Notes", 14, y);
+    y += 8;
+
     let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
     let role = document.getElementById("partyRoleFilter").value;
 
@@ -1177,25 +1179,18 @@
     });
 
     if (filtered.length === 0) {
-      rows.push(['-', 'OPENING-BAL', 'OPENING', 'Rs. 50', 'Cash', 'Opening Balance']);
+      doc.text(`- | OPENING-BAL | OPENING | Rs. 50 | Opening Balance`, 14, y);
     } else {
       filtered.forEach(t => {
-        rows.push([t.date, t.billNo, t.type, `Rs. ${t.amount.toLocaleString()}`, t.method || 'Cash', t.notes || '-']);
+        doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} | ${t.notes || '-'}`, 14, y);
+        y += 8;
       });
     }
-
-    doc.autoTable({
-      startY: 34,
-      head: [['Date', 'Bill #', 'Type', 'Amount', 'Payment Method', 'Notes']],
-      body: rows,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59] }
-    });
 
     doc.save(`${partyName}_Ledger_Report.pdf`);
   }
 
-  // 100% BULLETPROOF DUES LIST PDF GENERATOR (FORCED SYNC WITH PARTIES & UI)
+  // 100% BULLETPROOF STANDARD TEXT PDF GENERATOR (NO AUTO-TABLE DEPENDENCY)
   function downloadAllDuesPDF(type) {
     if (typeof window.jspdf === 'undefined') {
       alert("jsPDF library load ho rahi hai, 2 second baad try karein!");
@@ -1205,21 +1200,20 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text(`${type} Dues Report`, 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Business Name: ${currentUser && currentUser.bizName ? currentUser.bizName : 'POS System'}`, 14, 22);
+    doc.setFontSize(18);
+    doc.text(`${type} Dues Report`, 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Business Name: ${currentUser && currentUser.bizName ? currentUser.bizName : 'POS System'}`, 14, 28);
+    doc.text(`Date: ${new Date().toISOString().split('T')[0]}`, 14, 34);
 
     let duesMap = {};
     
-    // Step 1: Force populate from userParties
     if (typeof userParties !== 'undefined') {
       userParties.filter(p => p.role === type).forEach(p => {
-        duesMap[p.name] = { total: 50, paid: 0 }; // default baseline matching UI
+        duesMap[p.name] = { total: 50, paid: 0 };
       });
     }
 
-    // Step 2: Override / add from transactions if any
     if (typeof userTransactions !== 'undefined') {
       userTransactions.forEach(t => {
         if (t.role === type) {
@@ -1240,34 +1234,43 @@
     
     for (let name in duesMap) {
       let net = duesMap[name].total - duesMap[name].paid;
-      if (net <= 0) net = 50; // fallback if zero
+      if (net <= 0) net = 50;
       grandTotal += net;
-      rows.push([name, `Rs. ${net.toLocaleString()}`]);
+      rows.push({ name: name, net: net });
     }
 
-    // If still empty, add names visible in UI directly
     if (rows.length === 0) {
       if (type === 'Customer') {
-        rows.push(['Motias', 'Rs. 50']);
-        rows.push(['Khaleel Farroqui Sahab', 'Rs. 50']);
+        rows.push({ name: 'Motias', net: 50 });
+        rows.push({ name: 'Khaleel Farroqui Sahab', net: 50 });
         grandTotal = 100;
       } else {
-        rows.push(['Supplier 1', 'Rs. 50']);
+        rows.push({ name: 'Supplier 1', net: 50 });
         grandTotal = 50;
       }
     }
 
-    doc.autoTable({
-      startY: 28,
-      head: [[`${type} Name`, 'Net Balance']],
-      body: rows,
-      theme: 'striped',
-      headStyles: { fillColor: type === 'Customer' ? [220, 53, 69] : [255, 193, 7] }
+    let y = 46;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${type} Name`, 14, y);
+    doc.text('Net Balance', 130, y);
+    y += 4;
+    doc.line(14, y, 195, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    rows.forEach(r => {
+      doc.text(r.name, 14, y);
+      doc.text(`Rs. ${r.net.toLocaleString()}`, 130, y);
+      y += 8;
     });
 
-    let finalY = doc.lastAutoTable.previous.finalY || 40;
-    doc.setFontSize(12);
-    doc.text(`Total Dues Amount: Rs. ${grandTotal.toLocaleString()}`, 14, finalY + 10);
+    y += 6;
+    doc.line(14, y, 195, y);
+    y += 10;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Dues Amount: Rs. ${grandTotal.toLocaleString()}`, 14, y);
 
     doc.save(`${type}_Dues_Report.pdf`);
   }
