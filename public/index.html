@@ -7,7 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -29,7 +29,6 @@
 </head>
 <body>
 
-<!-- LOGIN / SIGNUP SCREEN -->
 <div id="authScreen" class="container">
   <div class="card card-stat p-4 auth-container bg-white shadow-lg">
     <div class="text-center mb-3">
@@ -83,7 +82,6 @@
   </div>
 </div>
 
-<!-- SUPER ADMIN DASHBOARD PANEL -->
 <div id="superAdminApp" class="container-fluid d-none p-3 p-md-4">
   <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <h3 class="fw-bold text-danger mb-0"><i class="fa-solid fa-user-shield me-2"></i>Super Admin Control Panel</h3>
@@ -135,7 +133,6 @@
   </div>
 </div>
 
-<!-- MAIN POS SYSTEM (FOR NORMAL USERS) -->
 <div id="mainApp" class="container-fluid d-none p-0">
   <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
     <div class="container-fluid">
@@ -237,7 +234,7 @@
           <h4 class="fw-bold mb-3">Party Ledger Search</h4>
           <div class="card card-stat p-3 bg-white mb-3">
             <div class="row g-2 align-items-center">
-              <div class="col-12 col-md-6"><input type="text" id="partySearchInput" class="form-control" placeholder="Search Name..." oninput="searchPartyLedger()"></div>
+              <div class="col-12 col-md-6"><input type="text" id="partySearchInput" class="form-control" placeholder="Search Exact Name..." oninput="searchPartyLedger()"></div>
               <div class="col-8 col-md-3">
                 <select id="partyRoleFilter" class="form-select" onchange="searchPartyLedger()">
                   <option value="ALL">All Parties</option>
@@ -281,7 +278,6 @@
           </div>
         </div>
 
-        <!-- REPORTS, EXPORTS & BACKUP / RESTORE TAB -->
         <div class="tab-pane fade" id="tabReports">
           <h4 class="fw-bold mb-3">Reports & Data Backup</h4>
           <div class="row g-3">
@@ -293,8 +289,7 @@
               <div class="card card-stat p-3 bg-white text-center border border-primary">
                 <i class="fa-solid fa-cloud-arrow-down text-primary fa-2x mb-2"></i>
                 <h6 class="fw-bold">Download Complete Backup</h6>
-                <p class="text-muted small">Apne saare customers, suppliers aur transactions ka backup JSON file mein download karein.</p>
-                <button onclick="downloadSystemBackup()" class="btn btn-sm btn-primary fw-bold w-100"><i class="fa-solid fa-download me-1"></i> Download Backup File</button>
+                <button onclick="downloadSystemBackup()" class="btn btn-sm btn-primary fw-bold w-100 mt-2"><i class="fa-solid fa-download me-1"></i> Download Backup File</button>
               </div>
             </div>
 
@@ -302,8 +297,7 @@
               <div class="card card-stat p-3 bg-white text-center border border-success">
                 <i class="fa-solid fa-cloud-arrow-up text-success fa-2x mb-2"></i>
                 <h6 class="fw-bold">Restore Backup File</h6>
-                <p class="text-muted small">Pehle se saved backup JSON file select karke poora data wapis restore karein.</p>
-                <input type="file" id="restoreFile" class="form-control form-control-sm mb-2" accept=".json" onchange="restoreSystemBackup(event)">
+                <input type="file" id="restoreFile" class="form-control form-control-sm mt-2" accept=".json" onchange="restoreSystemBackup(event)">
               </div>
             </div>
           </div>
@@ -313,7 +307,6 @@
   </div>
 </div>
 
-<!-- MULTI-ITEM ENTRY MODAL -->
 <div class="modal fade" id="entryModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -383,7 +376,6 @@
   </div>
 </div>
 
-<!-- ADD PARTY MODAL -->
 <div class="modal fade" id="addPartyModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -431,7 +423,6 @@
   </div>
 </div>
 
-<!-- VIEW BILL PICTURE MODAL -->
 <div class="modal fade" id="viewImgModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-center p-2">
@@ -698,7 +689,6 @@
     document.getElementById("authScreen").classList.remove("d-none");
   }
 
-  // DOWNLOAD BACKUP JSON FILE
   function downloadSystemBackup() {
     let backupData = {
       bizName: currentUser.bizName,
@@ -716,7 +706,6 @@
     dlAnchor.remove();
   }
 
-  // RESTORE SYSTEM BACKUP FROM JSON FILE
   async function restoreSystemBackup(event) {
     let file = event.target.files[0];
     if (!file) return;
@@ -806,7 +795,7 @@
     for (let name of allNames) {
       let cleanStored = name.toLowerCase().replace(/\s+/g, '');
       let cleanTyped = typedName.replace(/\s+/g, '');
-      if (cleanStored === cleanTyped || cleanStored.includes(cleanTyped) || cleanTyped.includes(cleanStored)) {
+      if (cleanStored === cleanTyped) {
         matchedPartyName = name;
         break;
       }
@@ -1223,6 +1212,7 @@
     document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
   }
 
+  // FIXED STRICT PARTY SEARCH LEDGER
   function searchPartyLedger() {
     let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
     let role = document.getElementById("partyRoleFilter").value;
@@ -1235,26 +1225,33 @@
       return;
     }
 
-    let filtered = userTransactions.filter(t => {
-      let matchQuery = t.name.toLowerCase().includes(query);
-      let matchRole = (role === "ALL") || (t.role === role);
-      return matchQuery && matchRole;
-    });
+    // Exact or starts-with matching for distinct party separation
+    let matchedPartyName = null;
+    let allNames = new Set();
+    userParties.forEach(p => { if (role === "ALL" || p.role === role) allNames.add(p.name); });
+    userTransactions.forEach(t => { if (role === "ALL" || t.role === role) allNames.add(t.name); });
 
-    if (filtered.length === 0) {
-      let pObj = userParties.find(p => p.name.toLowerCase().includes(query) && (role === "ALL" || p.role === role));
-      if (pObj) {
-        document.getElementById("selectedPartyName").innerText = pObj.name;
-        tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found for this party.</td></tr>`;
-        document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
-        return;
+    for (let name of allNames) {
+      if (name.toLowerCase() === query || name.toLowerCase().startsWith(query)) {
+        matchedPartyName = name;
+        break;
       }
+    }
 
-      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found.</td></tr>`;
+    if (!matchedPartyName) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No exact party found.</td></tr>`;
+      document.getElementById("selectedPartyName").innerText = "Select a Party";
+      document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
       return;
     }
 
-    document.getElementById("selectedPartyName").innerText = filtered[0].name;
+    let filtered = userTransactions.filter(t => {
+      let matchName = t.name.toLowerCase() === matchedPartyName.toLowerCase();
+      let matchRole = (role === "ALL") || (t.role === role);
+      return matchName && matchRole;
+    });
+
+    document.getElementById("selectedPartyName").innerText = matchedPartyName;
 
     let netBalance = 0, rows = "";
     filtered.forEach(t => {
@@ -1275,7 +1272,7 @@
       `;
     });
 
-    tbody.innerHTML = rows;
+    tbody.innerHTML = rows || `<tr><td colspan="6" class="text-muted">No transactions found for this party.</td></tr>`;
     document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
   }
 
@@ -1339,14 +1336,7 @@
     doc.text("Date | Bill # | Type | Amount (Method) | Notes", 14, y);
     y += 8;
 
-    let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
-    let role = document.getElementById("partyRoleFilter").value;
-
-    let filtered = userTransactions.filter(t => {
-      let matchQuery = t.name.toLowerCase().includes(query);
-      let matchRole = (role === "ALL") || (t.role === role);
-      return matchQuery && matchRole;
-    });
+    let filtered = userTransactions.filter(t => t.name.toLowerCase() === partyName.toLowerCase());
 
     if (filtered.length === 0) {
       doc.text(`No transactions found for this party.`, 14, y);
