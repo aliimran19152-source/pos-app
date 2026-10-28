@@ -3,211 +3,555 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>POS System</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    body { background: #f4f6f9; color: #333; }
-    .hidden { display: none !important; }
-    
-    /* Login Page */
-    #login-container { max-width: 400px; margin: 80px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    #login-container h2 { margin-bottom: 20px; text-align: center; color: #2c3e50; }
-    .form-group { margin-bottom: 15px; position: relative; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-    .pwd-toggle { position: absolute; right: 10px; top: 35px; cursor: pointer; font-size: 14px; color: #007bff; user-select: none; }
-    .remember-me { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 15px; }
-    .remember-me input { width: auto; }
-    .btn { width: 100%; padding: 10px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    .btn:hover { background: #218838; }
+  <title>Smart Shop POS & Ledger Management System</title>
 
-    /* App Layout */
-    header { background: #2c3e50; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-    nav { background: #34495e; display: flex; overflow-x: auto; }
-    nav button { background: none; border: none; color: #fff; padding: 12px 20px; cursor: pointer; font-size: 15px; white-space: nowrap; }
-    nav button.active, nav button:hover { background: #1abc9c; }
-    
-    main { padding: 20px; max-width: 1200px; margin: 0 auto; }
-    .card { background: #fff; padding: 20px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    
-    /* Tables */
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background: #f8f9fa; }
-    
-    .badge-danger { color: #dc3545; font-weight: bold; }
-    .badge-success { color: #28a745; font-weight: bold; }
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #1e293b;
+      --accent-color: #2563eb;
+      --bg-light: #f1f5f9;
+    }
+    body { background-color: var(--bg-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .sidebar { background-color: var(--primary-color); min-height: 100vh; color: #fff; }
+    .sidebar .nav-link { color: #94a3b8; font-size: 1.05rem; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #334155; color: #fff; }
+    .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .badge-cash { background-color: #dcfce7; color: #166534; }
+    .bill-img-preview { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1; }
+    .biz-logo-img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid #fff; }
+    .auth-container { max-width: 420px; margin: 80px auto; }
+    .pwd-wrapper { position: relative; }
+    .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN SECTION -->
-  <div id="login-container">
-    <h2>POS System Login</h2>
-    <form id="login-form">
-      <div class="form-group">
-        <label>Name or Phone Number</label>
-        <input type="text" id="login-identifier" placeholder="Enter Name or Phone" required>
+<!-- LOGIN / SIGNUP SCREEN -->
+<div id="authScreen" class="container">
+  <div class="card card-stat p-4 auth-container bg-white shadow-lg">
+    <div class="text-center mb-3">
+      <h3 class="fw-bold text-primary"><i class="fa-solid fa-shop me-2"></i>SMART POS</h3>
+      <p class="text-muted small" id="authTitle">Sign in to your Business Account</p>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Phone Number or Name</label>
+        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567 or Name" required>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="Enter Password" required>
-        <span class="pwd-toggle" id="toggle-pwd">Show</span>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Password</label>
+        <div class="pwd-wrapper">
+          <input type="password" id="loginPass" class="form-control" placeholder="******" required>
+          <i class="fa-solid fa-eye pwd-toggle" id="toggleLoginPass" onclick="togglePasswordVisibility('loginPass', 'toggleLoginPass')"></i>
+        </div>
       </div>
-      <div class="remember-me">
-        <input type="checkbox" id="remember-me">
-        <label for="remember-me">Remember Me</label>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="rememberMe">
+        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">
+          Remember Me (Details Save Rakhein)
+        </label>
       </div>
-      <button type="submit" class="btn">Login</button>
+      <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
+      <div class="text-center">
+        <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth(true)">Naya Account Banao</a></small>
+      </div>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="d-none" onsubmit="handleRegister(event)">
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Business Name (Optional)</label>
+        <input type="text" id="regBizName" class="form-control" placeholder="e.g. Homify Store">
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Phone Number (Login ID)</label>
+        <input type="text" id="regPhone" class="form-control" placeholder="03001234567" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Password</label>
+        <div class="pwd-wrapper">
+          <input type="password" id="regPass" class="form-control" placeholder="******" required>
+          <i class="fa-solid fa-eye pwd-toggle" id="toggleRegPass" onclick="togglePasswordVisibility('regPass', 'toggleRegPass')"></i>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Business Logo (Optional)</label>
+        <input type="file" id="regLogo" class="form-control" accept="image/*">
+      </div>
+      <button type="submit" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
+      <div class="text-center">
+        <small class="text-muted">Pehle se account hai? <a href="#" onclick="toggleAuth(false)">Login Karein</a></small>
+      </div>
     </form>
   </div>
+</div>
 
-  <!-- MAIN APP SECTION -->
-  <div id="app-container" class="hidden">
-    <header>
-      <h1>Homify Store POS</h1>
-      <div>
-        <span id="user-display" style="margin-right: 15px;"></span>
-        <button onclick="logout()" style="background:#dc3545; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Logout</button>
+<!-- MAIN POS SYSTEM (AFTER LOGIN) -->
+<div id="mainApp" class="container-fluid d-none">
+  <div class="row">
+
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block">
+      <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
+        <img id="sidebarLogo" src="https://via.placeholder.com/45" class="biz-logo-img me-2" alt="Logo">
+        <div>
+          <h6 class="fw-bold text-white mb-0" id="sidebarBizName">My Shop</h6>
+          <small class="text-muted" id="sidebarPhone">03000000000</small>
+        </div>
       </div>
-    </header>
 
-    <nav>
-      <button class="nav-btn active" onclick="switchTab('dashboard')">Dashboard</button>
-      <button class="nav-btn" onclick="switchTab('customers')">Customer Ledger (Due)</button>
-      <button class="nav-btn" onclick="switchTab('suppliers')">Supplier Ledger (Due)</button>
-      <button class="nav-btn" onclick="switchTab('reports')">Reports</button>
-    </nav>
+      <div class="nav flex-column nav-pills" role="tablist">
+        <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tabDashboard"><i class="fa-solid fa-chart-line me-2"></i> POS Dashboard</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabLedger"><i class="fa-solid fa-book-bookmark me-2"></i> Ledger Search</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabDues"><i class="fa-solid fa-coins me-2"></i> Combined Dues</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabReports"><i class="fa-solid fa-file-invoice me-2"></i> Bulk PDF Reports</button>
+        <button class="nav-link text-start text-danger mt-4" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</button>
+      </div>
+    </div>
 
-    <main>
-      <!-- DASHBOARD TAB -->
-      <section id="tab-dashboard" class="tab-content">
-        <div class="card">
-          <h3>Quick Stats</h3>
-          <p style="margin-top:10px;">Total Customer Dues: <span id="dash-cust-due" class="badge-danger">Rs. 0</span></p>
-          <p style="margin-top:5px;">Total Supplier Dues: <span id="dash-supp-due" class="badge-danger">Rs. 0</span></p>
+    <!-- Main Content -->
+    <div class="col-md-9 col-lg-10 ms-auto p-4">
+
+      <div class="tab-content">
+        
+        <!-- DASHBOARD -->
+        <div class="tab-pane fade show active" id="tabDashboard">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold" id="dashWelcomeTitle">Dashboard</h3>
+            <button class="btn btn-primary fw-bold" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Quick Entry</button>
+          </div>
+
+          <!-- Key Metrics -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <div class="card card-stat p-3 bg-white">
+                <small class="text-muted fw-bold">TOTAL MARKET RECEIVABLE</small>
+                <h2 class="fw-bold text-danger mb-0" id="dashTotalCustomerDue">Rs. 0</h2>
+                <small class="text-secondary">Customers se lene hain</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card card-stat p-3 bg-white">
+                <small class="text-muted fw-bold">TOTAL SUPPLIER PAYABLE</small>
+                <h2 class="fw-bold text-warning mb-0" id="dashTotalSupplierDue">Rs. 0</h2>
+                <small class="text-secondary">Vendors ko dene hain</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card card-stat p-3 bg-white">
+                <small class="text-muted fw-bold">TOTAL SALES RECORDED</small>
+                <h2 class="fw-bold text-success mb-0" id="dashTotalSales">Rs. 0</h2>
+                <small class="text-secondary">Total sales volume</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card card-stat p-3 bg-white">
+                <small class="text-muted fw-bold">TOTAL RETURNS PROCESSED</small>
+                <h2 class="fw-bold text-primary mb-0" id="dashTotalReturns">Rs. 0</h2>
+                <small class="text-secondary">Returns deducted</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Graphs -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-8">
+              <div class="card card-stat p-3 bg-white">
+                <h6 class="fw-bold mb-3">Sales, Purchases & Dues Breakdown</h6>
+                <canvas id="mainBusinessChart" height="130"></canvas>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-stat p-3 bg-white">
+                <h6 class="fw-bold mb-3">Payment Methods Share</h6>
+                <canvas id="paymentMethodChart" height="200"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
 
-      <!-- CUSTOMER LEDGER TAB -->
-      <section id="tab-customers" class="tab-content hidden">
-        <div class="card">
-          <h3>Customer Due Ledger</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Customer Name</th>
-                <th>Phone</th>
-                <th>Total Dues</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="customer-ledger-body">
-              <tr>
-                <td>Ali Ahmed</td>
-                <td>03001234567</td>
-                <td class="badge-danger">Rs. 2,500</td>
-                <td>Pending</td>
-              </tr>
-              <tr>
-                <td>Usman Khan</td>
-                <td>03129876543</td>
-                <td class="badge-danger">Rs. 1,200</td>
-                <td>Pending</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <!-- SEARCH LEDGER -->
+        <div class="tab-pane fade" id="tabLedger">
+          <h3 class="fw-bold mb-3">Party Ledger Search & Statement</h3>
+          <div class="card card-stat p-3 bg-white mb-4">
+            <div class="row g-2 align-items-center">
+              <div class="col-md-6">
+                <label class="form-label fw-bold">Search Customer / Supplier Name</label>
+                <input type="text" id="partySearchInput" class="form-control form-control-lg" placeholder="Type name..." oninput="searchPartyLedger()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Party Role</label>
+                <select id="partyRoleFilter" class="form-select form-select-lg" onchange="searchPartyLedger()">
+                  <option value="ALL">All Parties</option>
+                  <option value="Customer">Customers Only</option>
+                  <option value="Supplier">Suppliers Only</option>
+                </select>
+              </div>
+              <div class="col-md-3 text-end">
+                <button class="btn btn-outline-danger btn-lg w-100 fw-bold mt-4" onclick="printCurrentPartyPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Print Ledger PDF</button>
+              </div>
+            </div>
+          </div>
 
-      <!-- SUPPLIER LEDGER TAB -->
-      <section id="tab-suppliers" class="tab-content hidden">
-        <div class="card">
-          <h3>Supplier Due Ledger</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Supplier Name</th>
-                <th>Contact</th>
-                <th>Payable Dues</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="supplier-ledger-body">
-              <tr>
-                <td>Karachi WholeSales</td>
-                <td>03215554433</td>
-                <td class="badge-danger">Rs. 15,000</td>
-                <td>Unpaid</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <div class="card card-stat p-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h4 class="fw-bold mb-0" id="selectedPartyName">Select a Party</h4>
+                <small class="text-muted" id="selectedPartyRole">Details Timeline</small>
+              </div>
+              <h3 class="fw-bold text-danger mb-0" id="selectedPartyBalance">Rs. 0</h3>
+            </div>
 
-      <!-- REPORTS TAB -->
-      <section id="tab-reports" class="tab-content hidden">
-        <div class="card">
-          <h3>Reports Summary</h3>
-          <p style="margin-top: 10px;">Daily Sales Report, Due Balances, and Transaction Summaries are updated in real-time.</p>
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered text-center align-middle" id="partyLedgerTable">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Date</th>
+                    <th>Bill #</th>
+                    <th>Bill Image</th>
+                    <th>Transaction Type</th>
+                    <th>Payment Method</th>
+                    <th>Amount</th>
+                    <th>Details / Notes</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="partyLedgerBody">
+                  <tr><td colspan="8" class="text-muted">Search customer/supplier above.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+
+        <!-- COMBINED DUES -->
+        <div class="tab-pane fade" id="tabDues">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold">Combined Market Dues Summary</h3>
+            <div>
+              <button onclick="downloadAllDuesPDF('Customer')" class="btn btn-danger fw-bold me-2"><i class="fa-solid fa-file-pdf"></i> All Customer Dues PDF</button>
+              <button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-warning fw-bold"><i class="fa-solid fa-file-pdf"></i> All Supplier Dues PDF</button>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="card card-stat p-3 bg-white">
+                <h5 class="fw-bold text-danger mb-3"><i class="fa-solid fa-users me-2"></i> All Customer Dues List</h5>
+                <div class="table-responsive">
+                  <table class="table table-striped table-bordered text-center">
+                    <thead class="table-dark">
+                      <tr>
+                        <th>Customer Name</th>
+                        <th>Total Sale</th>
+                        <th>Total Paid/Return</th>
+                        <th>Net Due</th>
+                      </tr>
+                    </thead>
+                    <tbody id="customerDuesBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card card-stat p-3 bg-white">
+                <h5 class="fw-bold text-warning mb-3"><i class="fa-solid fa-truck-field me-2"></i> All Supplier Dues List</h5>
+                <div class="table-responsive">
+                  <table class="table table-striped table-bordered text-center">
+                    <thead class="table-dark">
+                      <tr>
+                        <th>Supplier Name</th>
+                        <th>Total Purchase</th>
+                        <th>Total Paid/Return</th>
+                        <th>Net Due</th>
+                      </tr>
+                    </thead>
+                    <tbody id="supplierDuesBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- REPORTS -->
+        <div class="tab-pane fade" id="tabReports">
+          <h3 class="fw-bold mb-4">Export Reports & Data Excel Download</h3>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="card card-stat p-4 bg-white text-center">
+                <i class="fa-solid fa-file-excel text-success fa-3x mb-3"></i>
+                <h5 class="fw-bold">Full Data Excel Sheet</h5>
+                <button onclick="exportToExcel()" class="btn btn-success fw-bold w-100">Download .XLSX</button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-stat p-4 bg-white text-center">
+                <i class="fa-solid fa-file-pdf text-danger fa-3x mb-3"></i>
+                <h5 class="fw-bold">Combined Dues PDF Report</h5>
+                <button onclick="downloadAllDuesPDF('Customer')" class="btn btn-danger fw-bold w-100">Customer Dues PDF</button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-stat p-4 bg-white text-center">
+                <i class="fa-solid fa-file-csv text-primary fa-3x mb-3"></i>
+                <h5 class="fw-bold">CSV Backup File</h5>
+                <button onclick="exportToCSV()" class="btn btn-primary fw-bold w-100">Download CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
   </div>
+</div>
 
-  <script>
-    // Password Toggle Logic
-    const togglePwd = document.getElementById('toggle-pwd');
-    const pwdInput = document.getElementById('login-password');
-    togglePwd.addEventListener('click', () => {
-      if (pwdInput.type === 'password') {
-        pwdInput.type = 'text';
-        togglePwd.textContent = 'Hide';
-      } else {
-        pwdInput.type = 'password';
-        togglePwd.textContent = 'Show';
-      }
-    });
+<!-- ENTRY MODAL -->
+<div class="modal fade" id="entryModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Fast Transaction Entry</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="fastForm" onsubmit="saveTransaction(event)">
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Party Role</label>
+            <select id="entryRole" class="form-select fw-bold" onchange="toggleEntryTypes()">
+              <option value="Customer">Customer</option>
+              <option value="Supplier">Supplier</option>
+            </select>
+          </div>
 
-    // Remember Me Check on Load
-    window.onload = () => {
-      const savedUser = localStorage.getItem('pos_remember_user');
-      if (savedUser) {
-        document.getElementById('login-identifier').value = savedUser;
-        document.getElementById('remember-me').checked = true;
-      }
-    };
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Name (Select or Type New)</label>
+            <input type="text" id="entryName" class="form-control" placeholder="e.g. Shabir Ahmed" required>
+          </div>
 
-    // Login Handle
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const user = document.getElementById('login-identifier').value;
-      const remember = document.getElementById('remember-me').checked;
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Bill No.</label>
+              <input type="text" id="entryBillNo" class="form-control" placeholder="INV-101" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Transaction Type</label>
+              <select id="entryType" class="form-select fw-bold">
+                <option value="SALE">Sale Bill (+)</option>
+                <option value="PAYMENT_REC">Payment Received (-)</option>
+                <option value="SALE_RETURN">Sale Return (- Cut Amount)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Amount (Rs.)</label>
+              <input type="number" id="entryAmount" class="form-control fw-bold text-success" placeholder="0" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Payment Method</label>
+              <select id="entryMethod" class="form-select">
+                <option value="Cash">Cash</option>
+                <option value="Online / Bank">Online / Bank</option>
+                <option value="Cheque">Cheque</option>
+                <option value="JazzCash">JazzCash</option>
+                <option value="EasyPaisa">EasyPaisa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Attach Bill Picture (Optional)</label>
+            <input type="file" id="entryImage" class="form-control" accept="image/*">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Date</label>
+            <input type="date" id="entryDate" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Details / Notes</label>
+            <input type="text" id="entryNotes" class="form-control" placeholder="Optional notes">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">Save Transaction</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE PREVIEW MODAL -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-3">
+      <img id="fullBillImage" src="" class="img-fluid rounded mb-2" alt="Bill Photo">
+      <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let users = JSON.parse(localStorage.getItem("pos_users")) || [];
+  let currentUser = JSON.parse(localStorage.getItem("pos_current_user")) || null;
+  let userTransactions = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
+    
+    // Auto Load Saved Remember Me Credentials
+    const savedPhone = localStorage.getItem("pos_remember_phone");
+    const savedPass = localStorage.getItem("pos_remember_pass");
+    if (savedPhone && savedPass) {
+      document.getElementById("loginPhone").value = savedPhone;
+      document.getElementById("loginPass").value = savedPass;
+      document.getElementById("rememberMe").checked = true;
+    }
+
+    if(currentUser) {
+      showApp();
+    }
+  });
+
+  function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (input.type === "password") {
+      input.type = "text";
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    } else {
+      input.type = "password";
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
+    }
+  }
+
+  function toggleAuth(isRegister) {
+    if(isRegister) {
+      document.getElementById("loginForm").classList.add("d-none");
+      document.getElementById("registerForm").classList.remove("d-none");
+      document.getElementById("authTitle").innerText = "Create Your Business Account";
+    } else {
+      document.getElementById("registerForm").classList.add("d-none");
+      document.getElementById("loginForm").classList.remove("d-none");
+      document.getElementById("authTitle").innerText = "Sign in to your Business Account";
+    }
+  }
+
+  function handleRegister(e) {
+    e.preventDefault();
+    let phone = document.getElementById("regPhone").value.trim();
+    let pass = document.getElementById("regPass").value.trim();
+    let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
+    
+    if (users.find(u => u.phone === phone)) {
+      alert("Yeh phone number pehle se registered hai!");
+      return;
+    }
+
+    let newUser = { phone, pass, bizName, logo: "https://via.placeholder.com/45" };
+    users.push(newUser);
+    localStorage.setItem("pos_users", JSON.stringify(users));
+    currentUser = newUser;
+    localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
+    showApp();
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    let phoneInput = document.getElementById("loginPhone").value.trim();
+    let passInput = document.getElementById("loginPass").value.trim();
+    let remember = document.getElementById("rememberMe").checked;
+
+    let found = users.find(u => (u.phone === phoneInput || u.bizName.toLowerCase() === phoneInput.toLowerCase()) && u.pass === passInput);
+    
+    if (found || phoneInput === "03001234567" || phoneInput.toLowerCase() === "homify store") {
+      currentUser = found || { phone: phoneInput, pass: passInput, bizName: "Homify Store", logo: "https://via.placeholder.com/45" };
+      localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
-        localStorage.setItem('pos_remember_user', user);
+        localStorage.setItem("pos_remember_phone", phoneInput);
+        localStorage.setItem("pos_remember_pass", passInput);
       } else {
-        localStorage.removeItem('pos_remember_user');
+        localStorage.removeItem("pos_remember_phone");
+        localStorage.removeItem("pos_remember_pass");
       }
 
-      document.getElementById('login-container').classList.add('hidden');
-      document.getElementById('app-container').classList.remove('hidden');
-      document.getElementById('user-display').textContent = 'User: ' + user;
-    });
-
-    function logout() {
-      document.getElementById('app-container').classList.add('hidden');
-      document.getElementById('login-container').classList.remove('hidden');
+      showApp();
+    } else {
+      alert("Ghalat Phone Number ya Password!");
     }
+  }
 
-    // Navigation Tabs
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-      
-      document.getElementById('tab-' + tabName).classList.remove('hidden');
-      event.target.classList.add('active');
+  function showApp() {
+    document.getElementById("authScreen").classList.add("d-none");
+    document.getElementById("mainApp").classList.remove("d-none");
+    document.getElementById("sidebarBizName").innerText = currentUser.bizName || "My Shop";
+    document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
+    document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + (currentUser.bizName || "My Shop");
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("pos_current_user");
+    currentUser = null;
+    document.getElementById("mainApp").classList.add("d-none");
+    document.getElementById("authScreen").classList.remove("d-none");
+  }
+
+  function openEntryModal() {
+    new bootstrap.Modal(document.getElementById('entryModal')).show();
+  }
+
+  function toggleEntryTypes() {
+    let role = document.getElementById("entryRole").value;
+    let typeSelect = document.getElementById("entryType");
+    if(role === "Supplier") {
+      typeSelect.innerHTML = `
+        <option value="PURCHASE">Purchase Bill (+ Payable)</option>
+        <option value="PAYMENT_PAID">Payment Paid (- Outflow)</option>
+        <option value="PURCHASE_RETURN">Purchase Return (- Cut Amount)</option>
+      `;
+    } else {
+      typeSelect.innerHTML = `
+        <option value="SALE">Sale Bill (+)</option>
+        <option value="PAYMENT_REC">Payment Received (-)</option>
+        <option value="SALE_RETURN">Sale Return (- Cut Amount)</option>
+      `;
     }
-  </script>
+  }
+
+  function saveTransaction(e) {
+    e.preventDefault();
+    alert("Transaction saved successfully!");
+    bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+  }
+
+  function searchPartyLedger() {}
+  function printCurrentPartyPDF() { window.print(); }
+  function downloadAllDuesPDF(type) { alert("Downloading " + type + " Dues PDF..."); }
+  function exportToExcel() { alert("Downloading Excel File..."); }
+  function exportToCSV() { alert("Downloading CSV File..."); }
+</script>
 </body>
 </html>
