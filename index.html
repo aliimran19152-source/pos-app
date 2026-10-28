@@ -27,7 +27,6 @@
     .sidebar .nav-link, .mobile-nav-link { color: #94a3b8; font-size: 1rem; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; text-decoration: none; display: block; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active, .mobile-nav-link.active { background-color: #334155; color: #fff; }
     .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .biz-logo-img { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid #fff; }
     .auth-container { max-width: 420px; margin: 60px auto; }
     .pwd-wrapper { position: relative; }
     .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
@@ -60,7 +59,7 @@
       </div>
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" id="rememberMe">
-        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
+        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me (Save ID/Pass on screen)</label>
       </div>
       <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
       <div class="text-center">
@@ -366,14 +365,15 @@
           <div class="row g-2 mb-2">
             <div class="col-6 col-md-4">
               <label class="form-label small fw-bold">Party Role</label>
-              <select id="entryRole" class="form-select form-select-sm fw-bold" onchange="resetMultiRows()">
+              <select id="entryRole" class="form-select form-select-sm fw-bold" onchange="resetMultiRows(); updatePartySuggestions();">
                 <option value="Customer">Customer</option>
                 <option value="Supplier">Supplier</option>
               </select>
             </div>
             <div class="col-6 col-md-4">
               <label class="form-label small fw-bold">Name</label>
-              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" required>
+              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" list="partySuggestions" required autocomplete="off">
+              <datalist id="partySuggestions"></datalist>
             </div>
             <div class="col-6 col-md-4">
               <label class="form-label small fw-bold">Bill No.</label>
@@ -448,7 +448,7 @@
 
 <script>
   let users = JSON.parse(localStorage.getItem("pos_users")) || [];
-  let currentUser = JSON.parse(localStorage.getItem("pos_current_user")) || null;
+  let currentUser = null;
   let userTransactions = [];
   let userParties = [];
   let mainChart = null, methodChart = null;
@@ -462,10 +462,6 @@
       document.getElementById("loginPhone").value = savedPhone;
       document.getElementById("loginPass").value = savedPass;
       document.getElementById("rememberMe").checked = true;
-    }
-
-    if(currentUser) {
-      showApp();
     }
   });
 
@@ -517,7 +513,7 @@
     
     currentUser = newUser;
     localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
-    showApp();
+    syncAndShowApp();
   }
 
   function handleLogin(e) {
@@ -540,13 +536,16 @@
         localStorage.removeItem("pos_remember_pass");
       }
 
-      showApp();
+      syncAndShowApp();
     } else {
       alert("Invalid Phone Number or Password! Pehle account register karein.");
     }
   }
 
-  function showApp() {
+  // Cloud Sync via JSONbin.io Free API
+  const JSONBIN_MASTER_KEY = "$2a$10$7Xb1Y5Z...free_public_sync_key..."; // Placeholder for shared cloud sync bin
+  
+  async function syncAndShowApp() {
     document.getElementById("authScreen").classList.add("d-none");
     document.getElementById("mainApp").classList.remove("d-none");
     
@@ -556,9 +555,62 @@
     document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
     document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + name;
 
-    loadData();
+    await loadCloudData();
     refreshDashboard();
     renderPartiesTables();
+  }
+
+  async function loadCloudData() {
+    let txKey = "pos_tx_" + currentUser.phone;
+    let partyKey = "pos_parties_" + currentUser.phone;
+
+    // Try fetching from cloud storage (JSONbin fallback to localStorage if offline)
+    try {
+      let res = await fetch(`https://api.jsonbin.io/v3/b/65e...${currentUser.phone}`, {
+        headers: { "X-Master-Key": "$2a$10$DEMO_KEY" }
+      });
+      if(res.ok) {
+        let data = await res.json();
+        if(data.record && data.record[currentUser.phone]) {
+          userTransactions = data.record[currentUser.phone].transactions || [];
+          userParties = data.record[currentUser.phone].parties || [];
+          localStorage.setItem(txKey, JSON.stringify(userTransactions));
+          localStorage.setItem(partyKey, JSON.stringify(userParties));
+          return;
+        }
+      }
+    } catch(err) {
+      console.log("Offline mode: using local cache");
+    }
+
+    userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
+    userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
+  }
+
+  async function saveToCloud() {
+    let txKey = "pos_tx_" + currentUser.phone;
+    let partyKey = "pos_parties_" + currentUser.phone;
+    localStorage.setItem(txKey, JSON.stringify(userTransactions));
+    localStorage.setItem(partyKey, JSON.stringify(userParties));
+
+    // Push data to cloud backend sync
+    try {
+      await fetch(`https://api.jsonbin.io/v3/b/65e...${currentUser.phone}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": "$2a$10$DEMO_KEY"
+        },
+        body: JSON.stringify({
+          [currentUser.phone]: {
+            transactions: userTransactions,
+            parties: userParties
+          }
+        })
+      });
+    } catch(err) {
+      console.log("Cloud sync pending (saved locally)");
+    }
   }
 
   function handleLogout() {
@@ -570,7 +622,24 @@
 
   function openEntryModal() {
     resetMultiRows();
+    updatePartySuggestions();
     new bootstrap.Modal(document.getElementById('entryModal')).show();
+  }
+
+  function updatePartySuggestions() {
+    let role = document.getElementById("entryRole").value;
+    let datalist = document.getElementById("partySuggestions");
+    datalist.innerHTML = "";
+    
+    let names = new Set();
+    userParties.filter(p => p.role === role).forEach(p => names.add(p.name));
+    userTransactions.filter(t => t.role === role).forEach(t => names.add(t.name));
+
+    names.forEach(n => {
+      let opt = document.createElement("option");
+      opt.value = n;
+      datalist.appendChild(opt);
+    });
   }
 
   function resetMultiRows() {
@@ -637,15 +706,16 @@
     new bootstrap.Modal(document.getElementById('addPartyModal')).show();
   }
 
-  function saveParty(e) {
+  async function saveParty(e) {
     e.preventDefault();
     let role = document.getElementById("partyRoleInput").value;
-    let name = document.getElementById("partyNameInput").value.trim();
+    let name = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
     let phone = document.getElementById("partyPhoneInput").value.trim();
 
-    userParties.push({ id: Date.now(), role, name, phone });
-    let partyKey = "pos_parties_" + currentUser.phone;
-    localStorage.setItem(partyKey, JSON.stringify(userParties));
+    if(!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
+      userParties.push({ id: Date.now(), role, name, phone });
+      await saveToCloud();
+    }
 
     bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
     document.getElementById("addPartyForm").reset();
@@ -653,17 +723,13 @@
     renderPartiesTables();
   }
 
-  function loadData() {
-    let txKey = "pos_tx_" + currentUser.phone;
-    let partyKey = "pos_parties_" + currentUser.phone;
-    userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
-    userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
-  }
-
-  function saveTransaction(e) {
+  async function saveTransaction(e) {
     e.preventDefault();
     let role = document.getElementById("entryRole").value;
-    let name = document.getElementById("entryName").value.trim();
+    let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
+    let existingParty = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
+    let name = existingParty ? existingParty.name : rawName;
+
     let billNo = document.getElementById("entryBillNo").value.trim();
     let method = document.getElementById("entryMethod").value;
     let date = document.getElementById("entryDate").value;
@@ -682,14 +748,11 @@
       }
     });
 
-    let txKey = "pos_tx_" + currentUser.phone;
-    localStorage.setItem(txKey, JSON.stringify(userTransactions));
-
     if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
       userParties.push({ id: Date.now(), role, name, phone: '-' });
-      let partyKey = "pos_parties_" + currentUser.phone;
-      localStorage.setItem(partyKey, JSON.stringify(userParties));
     }
+
+    await saveToCloud();
 
     bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
     document.getElementById("fastForm").reset();
@@ -869,10 +932,9 @@
     document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
   }
 
-  function deleteTx(id) {
+  async function deleteTx(id) {
     userTransactions = userTransactions.filter(t => t.id !== id);
-    let txKey = "pos_tx_" + currentUser.phone;
-    localStorage.setItem(txKey, JSON.stringify(userTransactions));
+    await saveToCloud();
     refreshDashboard();
     renderPartiesTables();
     searchPartyLedger();
