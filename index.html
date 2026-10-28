@@ -24,14 +24,15 @@
     }
     body { background-color: var(--bg-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .sidebar { background-color: var(--primary-color); min-height: 100vh; color: #fff; }
-    .sidebar .nav-link { color: #94a3b8; font-size: 1.05rem; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; }
-    .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #334155; color: #fff; }
+    .sidebar .nav-link, .mobile-nav-link { color: #94a3b8; font-size: 1rem; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; text-decoration: none; display: block; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active, .mobile-nav-link.active { background-color: #334155; color: #fff; }
     .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .bill-img-preview { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1; }
-    .biz-logo-img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid #fff; }
-    .auth-container { max-width: 420px; margin: 80px auto; }
+    .biz-logo-img { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid #fff; }
+    .auth-container { max-width: 420px; margin: 60px auto; }
     .pwd-wrapper { position: relative; }
     .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
+    .mobile-header { background-color: var(--primary-color); color: white; padding: 10px 15px; }
+    .multi-entry-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -59,9 +60,7 @@
       </div>
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" id="rememberMe">
-        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">
-          Remember Me (Details Save Rakhein)
-        </label>
+        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
       </div>
       <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
       <div class="text-center">
@@ -98,11 +97,37 @@
   </div>
 </div>
 
-<!-- MAIN POS SYSTEM (AFTER LOGIN) -->
-<div id="mainApp" class="container-fluid d-none">
-  <div class="row">
+<!-- MAIN POS SYSTEM -->
+<div id="mainApp" class="container-fluid d-none p-0">
 
-    <!-- Sidebar Menu -->
+  <!-- Mobile Top Navbar -->
+  <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
+    <div class="container-fluid">
+      <div class="d-flex align-items-center">
+        <img id="mobileLogo" src="https://via.placeholder.com/40" class="biz-logo-img me-2" alt="Logo">
+        <h6 class="fw-bold text-white mb-0" id="mobileBizName">My Shop</h6>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse mt-2" id="mobileMenu">
+        <div class="nav flex-column" role="tablist">
+          <a class="mobile-nav-link active" data-bs-toggle="pill" data-bs-target="#tabDashboard" onclick="closeMobileMenu()"><i class="fa-solid fa-chart-line me-2"></i> POS Dashboard</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabCustomers" onclick="closeMobileMenu()"><i class="fa-solid fa-users me-2"></i> Customers</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabSuppliers" onclick="closeMobileMenu()"><i class="fa-solid fa-truck-field me-2"></i> Suppliers</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabLedger" onclick="closeMobileMenu()"><i class="fa-solid fa-book-bookmark me-2"></i> Ledger Search</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabDues" onclick="closeMobileMenu()"><i class="fa-solid fa-coins me-2"></i> Combined Dues</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabReports" onclick="closeMobileMenu()"><i class="fa-solid fa-file-invoice me-2"></i> Reports & Export</a>
+          <a class="mobile-nav-link text-danger mt-2 fw-bold" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="row g-0">
+
+    <!-- Desktop Sidebar -->
     <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block">
       <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
         <img id="sidebarLogo" src="https://via.placeholder.com/45" class="biz-logo-img me-2" alt="Logo">
@@ -124,61 +149,52 @@
     </div>
 
     <!-- Main Content -->
-    <div class="col-md-9 col-lg-10 ms-auto p-4">
+    <div class="col-md-9 col-lg-10 p-3 p-md-4">
 
       <div class="tab-content">
         
         <!-- DASHBOARD -->
         <div class="tab-pane fade show active" id="tabDashboard">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold" id="dashWelcomeTitle">Dashboard</h3>
-            <div>
-              <button class="btn btn-primary fw-bold me-2" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Quick Entry</button>
-              <button class="btn btn-outline-danger fw-bold" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</button>
-            </div>
+          <div class="d-flex justify-content-between align-items-center mb-3 mb-md-4">
+            <h4 class="fw-bold mb-0" id="dashWelcomeTitle">Dashboard</h4>
+            <button class="btn btn-primary fw-bold btn-sm btn-md-normal" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Multi-Item Entry</button>
           </div>
 
-          <!-- Key Metrics -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-3">
-              <div class="card card-stat p-3 bg-white">
-                <small class="text-muted fw-bold">TOTAL MARKET RECEIVABLE</small>
-                <h2 class="fw-bold text-danger mb-0" id="dashTotalCustomerDue">Rs. 0</h2>
-                <small class="text-secondary">Customers se lene hain</small>
+          <div class="row g-2 g-md-3 mb-3">
+            <div class="col-6 col-md-3">
+              <div class="card card-stat p-2 p-md-3 bg-white">
+                <small class="text-muted fw-bold" style="font-size: 11px;">CUSTOMER DUES</small>
+                <h4 class="fw-bold text-danger mb-0" id="dashTotalCustomerDue">Rs. 0</h4>
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="card card-stat p-3 bg-white">
-                <small class="text-muted fw-bold">TOTAL SUPPLIER PAYABLE</small>
-                <h2 class="fw-bold text-warning mb-0" id="dashTotalSupplierDue">Rs. 0</h2>
-                <small class="text-secondary">Vendors ko dene hain</small>
+            <div class="col-6 col-md-3">
+              <div class="card card-stat p-2 p-md-3 bg-white">
+                <small class="text-muted fw-bold" style="font-size: 11px;">SUPPLIER PAYABLE</small>
+                <h4 class="fw-bold text-warning mb-0" id="dashTotalSupplierDue">Rs. 0</h4>
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="card card-stat p-3 bg-white">
-                <small class="text-muted fw-bold">TOTAL SALES RECORDED</small>
-                <h2 class="fw-bold text-success mb-0" id="dashTotalSales">Rs. 0</h2>
-                <small class="text-secondary">Total sales volume</small>
+            <div class="col-6 col-md-3">
+              <div class="card card-stat p-2 p-md-3 bg-white">
+                <small class="text-muted fw-bold" style="font-size: 11px;">TOTAL SALES</small>
+                <h4 class="fw-bold text-success mb-0" id="dashTotalSales">Rs. 0</h4>
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="card card-stat p-3 bg-white">
-                <small class="text-muted fw-bold">TOTAL RETURNS PROCESSED</small>
-                <h2 class="fw-bold text-primary mb-0" id="dashTotalReturns">Rs. 0</h2>
-                <small class="text-secondary">Returns deducted</small>
+            <div class="col-6 col-md-3">
+              <div class="card card-stat p-2 p-md-3 bg-white">
+                <small class="text-muted fw-bold" style="font-size: 11px;">TOTAL RETURNS</small>
+                <h4 class="fw-bold text-primary mb-0" id="dashTotalReturns">Rs. 0</h4>
               </div>
             </div>
           </div>
 
-          <!-- Graphs -->
           <div class="row g-3 mb-4">
-            <div class="col-md-8">
+            <div class="col-12 col-md-8">
               <div class="card card-stat p-3 bg-white">
                 <h6 class="fw-bold mb-3">Sales, Purchases & Dues Breakdown</h6>
-                <canvas id="mainBusinessChart" height="130"></canvas>
+                <canvas id="mainBusinessChart" height="150"></canvas>
               </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
               <div class="card card-stat p-3 bg-white">
                 <h6 class="fw-bold mb-3">Payment Methods Share</h6>
                 <canvas id="paymentMethodChart" height="200"></canvas>
@@ -190,24 +206,22 @@
         <!-- CUSTOMERS TAB -->
         <div class="tab-pane fade" id="tabCustomers">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold">Customers Directory & Dues</h3>
-            <button class="btn btn-success fw-bold" onclick="openAddPartyModal('Customer')"><i class="fa-solid fa-user-plus me-1"></i> Add New Customer</button>
+            <h4 class="fw-bold mb-0">Customers</h4>
+            <button class="btn btn-success fw-bold btn-sm" onclick="openAddPartyModal('Customer')"><i class="fa-solid fa-user-plus me-1"></i> Add Customer</button>
           </div>
-          <div class="card card-stat p-3 bg-white">
+          <div class="card card-stat p-2 p-md-3 bg-white">
             <div class="table-responsive">
-              <table class="table table-striped table-bordered text-center align-middle">
+              <table class="table table-striped table-bordered text-center align-middle" style="font-size: 14px;">
                 <thead class="table-dark">
                   <tr>
-                    <th>Customer Name</th>
-                    <th>Phone Number</th>
-                    <th>Total Sales</th>
-                    <th>Total Payments/Returns</th>
-                    <th>Net Balance (Due)</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Net Due</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="customersTableBody">
-                  <tr><td colspan="6" class="text-muted">No customers added yet.</td></tr>
+                  <tr><td colspan="4" class="text-muted">No customers added yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -217,24 +231,22 @@
         <!-- SUPPLIERS TAB -->
         <div class="tab-pane fade" id="tabSuppliers">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold">Suppliers Directory & Dues</h3>
-            <button class="btn btn-warning fw-bold text-dark" onclick="openAddPartyModal('Supplier')"><i class="fa-solid fa-truck me-1"></i> Add New Supplier</button>
+            <h4 class="fw-bold mb-0">Suppliers</h4>
+            <button class="btn btn-warning fw-bold text-dark btn-sm" onclick="openAddPartyModal('Supplier')"><i class="fa-solid fa-truck me-1"></i> Add Supplier</button>
           </div>
-          <div class="card card-stat p-3 bg-white">
+          <div class="card card-stat p-2 p-md-3 bg-white">
             <div class="table-responsive">
-              <table class="table table-striped table-bordered text-center align-middle">
+              <table class="table table-striped table-bordered text-center align-middle" style="font-size: 14px;">
                 <thead class="table-dark">
                   <tr>
-                    <th>Supplier Name</th>
-                    <th>Phone Number</th>
-                    <th>Total Purchases</th>
-                    <th>Total Payments/Returns</th>
+                    <th>Supplier</th>
+                    <th>Phone</th>
                     <th>Net Payable</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="suppliersTableBody">
-                  <tr><td colspan="6" class="text-muted">No suppliers added yet.</td></tr>
+                  <tr><td colspan="4" class="text-muted">No suppliers added yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -243,52 +255,44 @@
 
         <!-- SEARCH LEDGER -->
         <div class="tab-pane fade" id="tabLedger">
-          <h3 class="fw-bold mb-3">Party Ledger Search & Statement</h3>
-          <div class="card card-stat p-3 bg-white mb-4">
+          <h4 class="fw-bold mb-3">Party Ledger Search</h4>
+          <div class="card card-stat p-3 bg-white mb-3">
             <div class="row g-2 align-items-center">
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Search Customer / Supplier Name</label>
-                <input type="text" id="partySearchInput" class="form-control form-control-lg" placeholder="Type name..." oninput="searchPartyLedger()">
+              <div class="col-12 col-md-6">
+                <input type="text" id="partySearchInput" class="form-control" placeholder="Search Name..." oninput="searchPartyLedger()">
               </div>
-              <div class="col-md-3">
-                <label class="form-label fw-bold">Party Role</label>
-                <select id="partyRoleFilter" class="form-select form-select-lg" onchange="searchPartyLedger()">
+              <div class="col-8 col-md-3">
+                <select id="partyRoleFilter" class="form-select" onchange="searchPartyLedger()">
                   <option value="ALL">All Parties</option>
-                  <option value="Customer">Customers Only</option>
-                  <option value="Supplier">Suppliers Only</option>
+                  <option value="Customer">Customers</option>
+                  <option value="Supplier">Suppliers</option>
                 </select>
               </div>
-              <div class="col-md-3 text-end">
-                <button class="btn btn-outline-danger btn-lg w-100 fw-bold mt-4" onclick="printCurrentPartyPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Print Ledger PDF</button>
+              <div class="col-4 col-md-3 text-end">
+                <button class="btn btn-outline-danger w-100 fw-bold" onclick="printCurrentPartyPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
               </div>
             </div>
           </div>
 
-          <div class="card card-stat p-3 bg-white">
+          <div class="card card-stat p-2 p-md-3 bg-white">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <h4 class="fw-bold mb-0" id="selectedPartyName">Select a Party</h4>
-                <small class="text-muted" id="selectedPartyRole">Details Timeline</small>
-              </div>
-              <h3 class="fw-bold text-danger mb-0" id="selectedPartyBalance">Rs. 0</h3>
+              <h5 class="fw-bold mb-0" id="selectedPartyName">Select a Party</h5>
+              <h4 class="fw-bold text-danger mb-0" id="selectedPartyBalance">Rs. 0</h4>
             </div>
 
             <div class="table-responsive">
-              <table class="table table-hover table-bordered text-center align-middle" id="partyLedgerTable">
+              <table class="table table-hover table-bordered text-center align-middle" style="font-size: 13px;" id="partyLedgerTable">
                 <thead class="table-dark">
                   <tr>
                     <th>Date</th>
                     <th>Bill #</th>
-                    <th>Bill Image</th>
-                    <th>Transaction Type</th>
-                    <th>Payment Method</th>
+                    <th>Type</th>
                     <th>Amount</th>
-                    <th>Details / Notes</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="partyLedgerBody">
-                  <tr><td colspan="8" class="text-muted">Search customer/supplier above.</td></tr>
+                  <tr><td colspan="5" class="text-muted">Search customer/supplier above.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -297,27 +301,15 @@
 
         <!-- COMBINED DUES -->
         <div class="tab-pane fade" id="tabDues">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold">Combined Market Dues Summary</h3>
-            <div>
-              <button onclick="downloadAllDuesPDF('Customer')" class="btn btn-danger fw-bold me-2"><i class="fa-solid fa-file-pdf"></i> All Customer Dues PDF</button>
-              <button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-warning fw-bold"><i class="fa-solid fa-file-pdf"></i> All Supplier Dues PDF</button>
-            </div>
-          </div>
-
+          <h4 class="fw-bold mb-3">Market Dues Summary</h4>
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <div class="card card-stat p-3 bg-white">
-                <h5 class="fw-bold text-danger mb-3"><i class="fa-solid fa-users me-2"></i> All Customer Dues List</h5>
+                <h6 class="fw-bold text-danger mb-2">Customer Dues List</h6>
                 <div class="table-responsive">
-                  <table class="table table-striped table-bordered text-center">
+                  <table class="table table-striped table-bordered text-center" style="font-size: 13px;">
                     <thead class="table-dark">
-                      <tr>
-                        <th>Customer Name</th>
-                        <th>Total Sale</th>
-                        <th>Total Paid/Return</th>
-                        <th>Net Due</th>
-                      </tr>
+                      <tr><th>Customer</th><th>Net Due</th></tr>
                     </thead>
                     <tbody id="customerDuesBody"></tbody>
                   </table>
@@ -325,18 +317,13 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <div class="card card-stat p-3 bg-white">
-                <h5 class="fw-bold text-warning mb-3"><i class="fa-solid fa-truck-field me-2"></i> All Supplier Dues List</h5>
+                <h6 class="fw-bold text-warning mb-2">Supplier Dues List</h6>
                 <div class="table-responsive">
-                  <table class="table table-striped table-bordered text-center">
+                  <table class="table table-striped table-bordered text-center" style="font-size: 13px;">
                     <thead class="table-dark">
-                      <tr>
-                        <th>Supplier Name</th>
-                        <th>Total Purchase</th>
-                        <th>Total Paid/Return</th>
-                        <th>Net Due</th>
-                      </tr>
+                      <tr><th>Supplier</th><th>Net Payable</th></tr>
                     </thead>
                     <tbody id="supplierDuesBody"></tbody>
                   </table>
@@ -348,27 +335,18 @@
 
         <!-- REPORTS -->
         <div class="tab-pane fade" id="tabReports">
-          <h3 class="fw-bold mb-4">Export Reports & Data Excel Download</h3>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <div class="card card-stat p-4 bg-white text-center">
-                <i class="fa-solid fa-file-excel text-success fa-3x mb-3"></i>
-                <h5 class="fw-bold">Full Data Excel Sheet</h5>
-                <button onclick="exportToExcel()" class="btn btn-success fw-bold w-100">Download .XLSX</button>
+          <h4 class="fw-bold mb-3">Reports & Export</h4>
+          <div class="row g-2">
+            <div class="col-6 col-md-4">
+              <div class="card card-stat p-3 bg-white text-center">
+                <i class="fa-solid fa-file-excel text-success fa-2x mb-2"></i>
+                <button onclick="exportToExcel()" class="btn btn-sm btn-success fw-bold w-100">Excel Export</button>
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="card card-stat p-4 bg-white text-center">
-                <i class="fa-solid fa-file-pdf text-danger fa-3x mb-3"></i>
-                <h5 class="fw-bold">Combined Dues PDF Report</h5>
-                <button onclick="downloadAllDuesPDF('Customer')" class="btn btn-danger fw-bold w-100">Customer Dues PDF</button>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card card-stat p-4 bg-white text-center">
-                <i class="fa-solid fa-file-csv text-primary fa-3x mb-3"></i>
-                <h5 class="fw-bold">CSV Backup File</h5>
-                <button onclick="exportToCSV()" class="btn btn-primary fw-bold w-100">Download CSV</button>
+            <div class="col-6 col-md-4">
+              <div class="card card-stat p-3 bg-white text-center">
+                <i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i>
+                <button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Dues PDF</button>
               </div>
             </div>
           </div>
@@ -380,52 +358,51 @@
   </div>
 </div>
 
-<!-- ENTRY MODAL -->
+<!-- MULTI-ITEM ENTRY MODAL -->
 <div class="modal fade" id="entryModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Fast Transaction Entry</h5>
+      <div class="modal-header bg-primary text-white p-2 px-3">
+        <h6 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Single Bill Multi-Transaction Entry</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <form id="fastForm" onsubmit="saveTransaction(event)">
-          <div class="mb-2">
-            <label class="form-label small fw-bold">Party Role</label>
-            <select id="entryRole" class="form-select fw-bold" onchange="toggleEntryTypes()">
-              <option value="Customer">Customer</option>
-              <option value="Supplier">Supplier</option>
-            </select>
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label small fw-bold">Name (Select or Type New)</label>
-            <input type="text" id="entryName" class="form-control" placeholder="e.g. Shabir Ahmed" required>
-          </div>
-
+          
           <div class="row g-2 mb-2">
-            <div class="col-6">
-              <label class="form-label small fw-bold">Bill No.</label>
-              <input type="text" id="entryBillNo" class="form-control" placeholder="INV-101" required>
-            </div>
-            <div class="col-6">
-              <label class="form-label small fw-bold">Transaction Type</label>
-              <select id="entryType" class="form-select fw-bold">
-                <option value="SALE">Sale Bill (+)</option>
-                <option value="PAYMENT_REC">Payment Received (-)</option>
-                <option value="SALE_RETURN">Sale Return (- Cut Amount)</option>
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Party Role</label>
+              <select id="entryRole" class="form-select form-select-sm fw-bold" onchange="resetMultiRows()">
+                <option value="Customer">Customer</option>
+                <option value="Supplier">Supplier</option>
               </select>
             </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Name</label>
+              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" required>
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Bill No.</label>
+              <input type="text" id="entryBillNo" class="form-control form-control-sm" placeholder="INV-101" required>
+            </div>
           </div>
 
-          <div class="row g-2 mb-2">
+          <div class="d-flex justify-content-between align-items-center my-2">
+            <label class="form-label small fw-bold mb-0">Bill Items / Transactions</label>
+            <button type="button" class="btn btn-sm btn-outline-success fw-bold" onclick="addMultiRow()"><i class="fa-solid fa-plus me-1"></i> Add Item/Entry</button>
+          </div>
+
+          <!-- Dynamic Multi-Rows Container -->
+          <div id="multiRowsContainer"></div>
+
+          <div class="row g-2 mb-2 mt-2">
             <div class="col-6">
-              <label class="form-label small fw-bold">Amount (Rs.)</label>
-              <input type="number" id="entryAmount" class="form-control fw-bold text-success" placeholder="0" required>
+              <label class="form-label small fw-bold">Date</label>
+              <input type="date" id="entryDate" class="form-control form-control-sm" required>
             </div>
             <div class="col-6">
               <label class="form-label small fw-bold">Payment Method</label>
-              <select id="entryMethod" class="form-select">
+              <select id="entryMethod" class="form-select form-select-sm">
                 <option value="Cash">Cash</option>
                 <option value="Online / Bank">Online / Bank</option>
                 <option value="Cheque">Cheque</option>
@@ -435,22 +412,12 @@
             </div>
           </div>
 
-          <div class="mb-2">
-            <label class="form-label small fw-bold">Attach Bill Picture (Optional)</label>
-            <input type="file" id="entryImage" class="form-control" accept="image/*">
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label small fw-bold">Date</label>
-            <input type="date" id="entryDate" class="form-control" required>
-          </div>
-
           <div class="mb-3">
-            <label class="form-label small fw-bold">Details / Notes</label>
-            <input type="text" id="entryNotes" class="form-control" placeholder="Optional notes">
+            <label class="form-label small fw-bold">Notes</label>
+            <input type="text" id="entryNotes" class="form-control form-control-sm" placeholder="Optional details">
           </div>
 
-          <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">Save Transaction</button>
+          <button type="submit" class="btn btn-primary w-100 fw-bold">Save Complete Bill</button>
         </form>
       </div>
     </div>
@@ -461,34 +428,24 @@
 <div class="modal fade" id="addPartyModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title fw-bold" id="addPartyModalTitle">Add New Party</h5>
+      <div class="modal-header bg-dark text-white p-2 px-3">
+        <h6 class="modal-title fw-bold" id="addPartyModalTitle">Add New Party</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <form id="addPartyForm" onsubmit="saveParty(event)">
           <input type="hidden" id="partyRoleInput">
-          <div class="mb-3">
+          <div class="mb-2">
             <label class="form-label small fw-bold">Name</label>
-            <input type="text" id="partyNameInput" class="form-control" placeholder="Enter Full Name" required>
+            <input type="text" id="partyNameInput" class="form-control" placeholder="Full Name" required>
           </div>
           <div class="mb-3">
             <label class="form-label small fw-bold">Phone Number</label>
             <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
           </div>
-          <button type="submit" class="btn btn-success w-100 fw-bold py-2">Save Party</button>
+          <button type="submit" class="btn btn-success w-100 fw-bold">Save Party</button>
         </form>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- IMAGE PREVIEW MODAL -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content text-center p-3">
-      <img id="fullBillImage" src="" class="img-fluid rounded mb-2" alt="Bill Photo">
-      <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
     </div>
   </div>
 </div>
@@ -505,7 +462,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
     
-    // Auto Load Saved Credentials
     const savedPhone = localStorage.getItem("pos_remember_phone");
     const savedPass = localStorage.getItem("pos_remember_pass");
     if (savedPhone && savedPass) {
@@ -518,6 +474,11 @@
       showApp();
     }
   });
+
+  function closeMobileMenu() {
+    let bsCollapse = new bootstrap.Collapse(document.getElementById('mobileMenu'), { toggle: false });
+    bsCollapse.hide();
+  }
 
   function togglePasswordVisibility(inputId, iconId) {
     const input = document.getElementById(inputId);
@@ -551,25 +512,12 @@
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
     
-    let logoFile = document.getElementById("regLogo").files[0];
-    let logoUrl = "https://via.placeholder.com/45";
-
-    let processReg = (imgData) => {
-      let newUser = { phone, pass, bizName, logo: imgData || logoUrl };
-      users.push(newUser);
-      localStorage.setItem("pos_users", JSON.stringify(users));
-      currentUser = newUser;
-      localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
-      showApp();
-    };
-
-    if (logoFile) {
-      let reader = new FileReader();
-      reader.onload = function(evt) { processReg(evt.target.result); };
-      reader.readAsDataURL(logoFile);
-    } else {
-      processReg(logoUrl);
-    }
+    let newUser = { phone, pass, bizName, logo: "https://via.placeholder.com/40" };
+    users.push(newUser);
+    localStorage.setItem("pos_users", JSON.stringify(users));
+    currentUser = newUser;
+    localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
+    showApp();
   }
 
   function handleLogin(e) {
@@ -581,7 +529,7 @@
     let found = users.find(u => (u.phone === phoneInput || u.bizName.toLowerCase() === phoneInput.toLowerCase()) && u.pass === passInput);
     
     if (found || phoneInput.length > 0) {
-      currentUser = found || { phone: phoneInput, pass: passInput, bizName: phoneInput || "My Shop", logo: "https://via.placeholder.com/45" };
+      currentUser = found || { phone: phoneInput, pass: passInput, bizName: phoneInput || "My Shop", logo: "https://via.placeholder.com/40" };
       localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
@@ -601,10 +549,13 @@
   function showApp() {
     document.getElementById("authScreen").classList.add("d-none");
     document.getElementById("mainApp").classList.remove("d-none");
-    document.getElementById("sidebarBizName").innerText = currentUser.bizName || "My Shop";
+    
+    let name = currentUser.bizName || "My Shop";
+    document.getElementById("sidebarBizName").innerText = name;
+    document.getElementById("mobileBizName").innerText = name;
     document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
-    document.getElementById("sidebarLogo").src = currentUser.logo || "https://via.placeholder.com/45";
-    document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + (currentUser.bizName || "My Shop");
+    
+    document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + name;
 
     loadData();
     refreshDashboard();
@@ -619,7 +570,45 @@
   }
 
   function openEntryModal() {
+    resetMultiRows();
     new bootstrap.Modal(document.getElementById('entryModal')).show();
+  }
+
+  function resetMultiRows() {
+    document.getElementById("multiRowsContainer").innerHTML = "";
+    addMultiRow();
+  }
+
+  function addMultiRow() {
+    let role = document.getElementById("entryRole").value;
+    let container = document.getElementById("multiRowsContainer");
+    
+    let options = role === "Supplier" ? `
+      <option value="PURCHASE">Purchase Bill (+)</option>
+      <option value="PAYMENT_PAID">Payment Paid (-)</option>
+      <option value="PURCHASE_RETURN">Purchase Return (-)</option>
+    ` : `
+      <option value="SALE">Sale Bill (+)</option>
+      <option value="PAYMENT_REC">Payment Rec (-)</option>
+      <option value="SALE_RETURN">Sale Return (-)</option>
+    `;
+
+    let rowDiv = document.createElement("div");
+    rowDiv.className = "multi-entry-row";
+    rowDiv.innerHTML = `
+      <div class="row g-2 align-items-center">
+        <div class="col-5">
+          <select class="form-select form-select-sm entry-row-type fw-bold">${options}</select>
+        </div>
+        <div class="col-5">
+          <input type="number" class="form-control form-control-sm entry-row-amount fw-bold text-success" placeholder="Amount (Rs.)" required>
+        </div>
+        <div class="col-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.multi-entry-row').remove()"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+    container.appendChild(rowDiv);
   }
 
   function openAddPartyModal(role) {
@@ -644,24 +633,6 @@
     renderPartiesTables();
   }
 
-  function toggleEntryTypes() {
-    let role = document.getElementById("entryRole").value;
-    let typeSelect = document.getElementById("entryType");
-    if(role === "Supplier") {
-      typeSelect.innerHTML = `
-        <option value="PURCHASE">Purchase Bill (+ Payable)</option>
-        <option value="PAYMENT_PAID">Payment Paid (- Outflow)</option>
-        <option value="PURCHASE_RETURN">Purchase Return (- Cut Amount)</option>
-      `;
-    } else {
-      typeSelect.innerHTML = `
-        <option value="SALE">Sale Bill (+)</option>
-        <option value="PAYMENT_REC">Payment Received (-)</option>
-        <option value="SALE_RETURN">Sale Return (- Cut Amount)</option>
-      `;
-    }
-  }
-
   function loadData() {
     let txKey = "pos_tx_" + (currentUser.phone || "default");
     let partyKey = "pos_parties_" + (currentUser.phone || "default");
@@ -674,41 +645,39 @@
     let role = document.getElementById("entryRole").value;
     let name = document.getElementById("entryName").value.trim();
     let billNo = document.getElementById("entryBillNo").value.trim();
-    let type = document.getElementById("entryType").value;
-    let amount = parseFloat(document.getElementById("entryAmount").value) || 0;
     let method = document.getElementById("entryMethod").value;
     let date = document.getElementById("entryDate").value;
     let notes = document.getElementById("entryNotes").value.trim();
-    let imgFile = document.getElementById("entryImage").files[0];
 
-    let addTx = (imgData) => {
-      let tx = { id: Date.now(), role, name, billNo, type, amount, method, date, notes, image: imgData || "" };
-      userTransactions.push(tx);
-      let txKey = "pos_tx_" + (currentUser.phone || "default");
-      localStorage.setItem(txKey, JSON.stringify(userTransactions));
+    let rowTypes = document.querySelectorAll(".entry-row-type");
+    let rowAmounts = document.querySelectorAll(".entry-row-amount");
 
-      if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
-        userParties.push({ id: Date.now(), role, name, phone: '-' });
-        let partyKey = "pos_parties_" + (currentUser.phone || "default");
-        localStorage.setItem(partyKey, JSON.stringify(userParties));
+    rowTypes.forEach((typeEl, index) => {
+      let type = typeEl.value;
+      let amount = parseFloat(rowAmounts[index].value) || 0;
+
+      if (amount > 0) {
+        let tx = { id: Date.now() + Math.random(), role, name, billNo, type, amount, method, date, notes };
+        userTransactions.push(tx);
       }
+    });
 
-      bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
-      document.getElementById("fastForm").reset();
-      document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
-      
-      refreshDashboard();
-      renderPartiesTables();
-      searchPartyLedger();
-    };
+    let txKey = "pos_tx_" + (currentUser.phone || "default");
+    localStorage.setItem(txKey, JSON.stringify(userTransactions));
 
-    if (imgFile) {
-      let reader = new FileReader();
-      reader.onload = function(evt) { addTx(evt.target.result); };
-      reader.readAsDataURL(imgFile);
-    } else {
-      addTx("");
+    if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
+      userParties.push({ id: Date.now(), role, name, phone: '-' });
+      let partyKey = "pos_parties_" + (currentUser.phone || "default");
+      localStorage.setItem(partyKey, JSON.stringify(userParties));
     }
+
+    bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+    document.getElementById("fastForm").reset();
+    document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
+    
+    refreshDashboard();
+    renderPartiesTables();
+    searchPartyLedger();
   }
 
   function refreshDashboard() {
@@ -774,10 +743,8 @@
         <tr>
           <td>${c}</td>
           <td>${custMap[c].phone}</td>
-          <td>Rs. ${custMap[c].total.toLocaleString()}</td>
-          <td>Rs. ${custMap[c].paid.toLocaleString()}</td>
           <td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td>
-          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View Ledger</button></td>
+          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View</button></td>
         </tr>
       `;
     }
@@ -788,16 +755,14 @@
         <tr>
           <td>${s}</td>
           <td>${suppMap[s].phone}</td>
-          <td>Rs. ${suppMap[s].total.toLocaleString()}</td>
-          <td>Rs. ${suppMap[s].paid.toLocaleString()}</td>
           <td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td>
-          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View Ledger</button></td>
+          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View</button></td>
         </tr>
       `;
     }
 
-    custBody.innerHTML = custHtml || `<tr><td colspan="6" class="text-muted">No customers found.</td></tr>`;
-    suppBody.innerHTML = suppHtml || `<tr><td colspan="6" class="text-muted">No suppliers found.</td></tr>`;
+    custBody.innerHTML = custHtml || `<tr><td colspan="4" class="text-muted">No customers found.</td></tr>`;
+    suppBody.innerHTML = suppHtml || `<tr><td colspan="4" class="text-muted">No suppliers found.</td></tr>`;
   }
 
   function viewPartyLedger(name, role) {
@@ -828,15 +793,15 @@
     let custHtml = "", suppHtml = "";
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      custHtml += `<tr><td>${c}</td><td>Rs. ${custMap[c].total.toLocaleString()}</td><td>Rs. ${custMap[c].paid.toLocaleString()}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
+      custHtml += `<tr><td>${c}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
     }
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
-      suppHtml += `<tr><td>${s}</td><td>Rs. ${suppMap[s].total.toLocaleString()}</td><td>Rs. ${suppMap[s].paid.toLocaleString()}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
+      suppHtml += `<tr><td>${s}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
     }
 
-    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="4" class="text-muted">No Customer Data</td></tr>`;
-    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="4" class="text-muted">No Supplier Data</td></tr>`;
+    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
+    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
   }
 
   function searchPartyLedger() {
@@ -845,7 +810,7 @@
     let tbody = document.getElementById("partyLedgerBody");
 
     if (!query) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-muted">Search customer/supplier above.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Search customer/supplier above.</td></tr>`;
       document.getElementById("selectedPartyName").innerText = "Select a Party";
       document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
       return;
@@ -858,29 +823,23 @@
     });
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-muted">No transactions found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No transactions found.</td></tr>`;
       return;
     }
 
     document.getElementById("selectedPartyName").innerText = filtered[0].name;
-    document.getElementById("selectedPartyRole").innerText = filtered[0].role + " Statement";
 
     let netBalance = 0, rows = "";
     filtered.forEach(t => {
       if (t.type === "SALE" || t.type === "PURCHASE") netBalance += t.amount;
       else netBalance -= t.amount;
 
-      let imgTag = t.image ? `<img src="${t.image}" class="bill-img-preview" onclick="showFullImg('${t.image}')">` : '-';
-
       rows += `
         <tr>
           <td>${t.date}</td>
           <td>${t.billNo}</td>
-          <td>${imgTag}</td>
           <td><span class="badge bg-secondary">${t.type}</span></td>
-          <td>${t.method}</td>
           <td class="fw-bold">Rs. ${t.amount.toLocaleString()}</td>
-          <td>${t.notes || '-'}</td>
           <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
       `;
@@ -897,11 +856,6 @@
     refreshDashboard();
     renderPartiesTables();
     searchPartyLedger();
-  }
-
-  function showFullImg(src) {
-    document.getElementById("fullBillImage").src = src;
-    new bootstrap.Modal(document.getElementById('imageModal')).show();
   }
 
   function renderCharts(sales, custDue, suppDue, methodShare) {
@@ -942,10 +896,6 @@
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Transactions");
     XLSX.writeFile(wb, "POS_Data.xlsx");
-  }
-
-  function exportToCSV() {
-    exportToExcel();
   }
 </script>
 </body>
