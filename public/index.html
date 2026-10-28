@@ -228,13 +228,13 @@
           </div>
         </div>
 
-        <!-- SEPARATE MULTI-LEDGER DOWNLOAD TAB -->
+        <!-- PARTY LEDGER SEARCH & QUICK INDIVIDUAL PDF TAB -->
         <div class="tab-pane fade" id="tabLedger">
-          <h4 class="fw-bold mb-3">Party Ledger Search & Separate Multi-Download</h4>
+          <h4 class="fw-bold mb-3">Party Ledger Search</h4>
           <div class="card card-stat p-3 bg-white mb-3">
             <div class="row g-2 align-items-center">
-              <div class="col-12 col-md-4">
-                <input type="text" id="partySearchInput" class="form-control" placeholder="Search Party Name..." list="ledgerSuggestions" oninput="searchPartyLedger()">
+              <div class="col-12 col-md-6">
+                <input type="text" id="partySearchInput" class="form-control" placeholder="Type Exact Name (e.g. Al Nafay Cotton)..." list="ledgerSuggestions" oninput="searchPartyLedger()">
                 <datalist id="ledgerSuggestions"></datalist>
               </div>
               <div class="col-6 col-md-3">
@@ -244,26 +244,26 @@
                   <option value="Supplier">Suppliers</option>
                 </select>
               </div>
-              <div class="col-6 col-md-5 text-end">
-                <button class="btn btn-outline-danger fw-bold btn-sm me-1" onclick="generatePartyLedgerPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Single PDF</button>
-                <button class="btn btn-danger fw-bold btn-sm" onclick="generateMultipleSeparatePDFs()"><i class="fa-solid fa-file-zipper me-1"></i> Download Separate PDFs (<span id="selectedCount">0</span>)</button>
+              <div class="col-6 col-md-3 text-end">
+                <button class="btn btn-outline-danger w-100 fw-bold" onclick="generatePartyLedgerPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Download PDF</button>
               </div>
             </div>
           </div>
 
+          <!-- ALL PARTIES QUICK LIST WITH PDF BUTTONS -->
           <div class="card card-stat p-2 p-md-3 bg-white mb-3">
-            <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-list-check me-1"></i> Tick Parties for Separate Individual PDFs</h6>
-            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+            <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-list me-1"></i> All Parties Quick PDF Download List</h6>
+            <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
               <table class="table table-sm table-bordered text-center align-middle" style="font-size: 13px;">
                 <thead class="table-dark">
                   <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="selectAllParties" onclick="toggleSelectAllParties(this)"></th>
                     <th>Party Name</th>
                     <th>Role</th>
                     <th>Phone</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
-                <tbody id="multiSelectPartiesBody">
+                <tbody id="allPartiesLedgerListBody">
                   <tr><td colspan="4" class="text-muted">No parties found.</td></tr>
                 </tbody>
               </table>
@@ -691,7 +691,7 @@
     refreshDashboard();
     renderPartiesTables();
     updateLedgerSuggestions();
-    renderMultiSelectPartiesTable();
+    renderAllPartiesLedgerList();
   }
 
   async function saveToServer() {
@@ -752,7 +752,7 @@
           refreshDashboard();
           renderPartiesTables();
           updateLedgerSuggestions();
-          renderMultiSelectPartiesTable();
+          renderAllPartiesLedgerList();
           alert("Backup Successfully Restore Ho Gaya Hai!");
         }
       } catch (err) {
@@ -830,9 +830,9 @@
     });
   }
 
-  function renderMultiSelectPartiesTable() {
+  function renderAllPartiesLedgerList() {
     let role = document.getElementById("partyRoleFilter").value;
-    let tbody = document.getElementById("multiSelectPartiesBody");
+    let tbody = document.getElementById("allPartiesLedgerListBody");
     
     let partyMap = new Map();
     userParties.forEach(p => {
@@ -852,27 +852,18 @@
     partyMap.forEach((info, name) => {
       html += `
         <tr>
-          <td><input type="checkbox" class="party-select-checkbox" value="${name}" onchange="updateSelectedCount()"></td>
           <td class="fw-bold text-start ps-3">${name}</td>
           <td><span class="badge bg-secondary">${info.role}</span></td>
           <td>${info.phone}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary fw-bold me-1" onclick="viewPartyLedger('${name}', '${info.role}')">View</button>
+            <button class="btn btn-sm btn-danger fw-bold" onclick="exportSinglePartyPDF('${name}')"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+          </td>
         </tr>
       `;
     });
 
     tbody.innerHTML = html || `<tr><td colspan="4" class="text-muted">No parties found.</td></tr>`;
-    updateSelectedCount();
-  }
-
-  function toggleSelectAllParties(master) {
-    let checkboxes = document.querySelectorAll(".party-select-checkbox");
-    checkboxes.forEach(cb => cb.checked = master.checked);
-    updateSelectedCount();
-  }
-
-  function updateSelectedCount() {
-    let checked = document.querySelectorAll(".party-select-checkbox:checked").length;
-    document.getElementById("selectedCount").innerText = checked;
   }
 
   function checkPartyLiveBalance() {
@@ -1057,7 +1048,7 @@
     refreshDashboard();
     renderPartiesTables();
     updateLedgerSuggestions();
-    renderMultiSelectPartiesTable();
+    renderAllPartiesLedgerList();
   }
 
   async function deleteParty(name, role) {
@@ -1068,7 +1059,7 @@
       refreshDashboard();
       renderPartiesTables();
       updateLedgerSuggestions();
-      renderMultiSelectPartiesTable();
+      renderAllPartiesLedgerList();
       searchPartyLedger();
     }
   }
@@ -1160,7 +1151,7 @@
     refreshDashboard();
     renderPartiesTables();
     updateLedgerSuggestions();
-    renderMultiSelectPartiesTable();
+    renderAllPartiesLedgerList();
     searchPartyLedger();
   }
 
@@ -1428,7 +1419,7 @@
   function generatePartyLedgerPDF() {
     let partyName = document.getElementById("selectedPartyName").innerText;
     if (partyName === "Select a Party") {
-      return alert("Pehle kisi specific party ka ledger select karein!");
+      return alert("Pehle kisi specific party ka ledger search ya select karein!");
     }
     exportSinglePartyPDF(partyName);
   }
@@ -1470,25 +1461,6 @@
     }
 
     doc.save(`${partyName.replace(/\s+/g, '_')}_Ledger.pdf`);
-  }
-
-  // GENERATE SEPARATE INDIVIDUAL PDF FOR EACH CHECKED PARTY
-  async function generateMultipleSeparatePDFs() {
-    let checkedBoxes = document.querySelectorAll(".party-select-checkbox:checked");
-    if (checkedBoxes.length === 0) {
-      return alert("Kam az kam aik party select karein!");
-    }
-
-    let count = 0;
-    for (let cb of checkedBoxes) {
-      let partyName = cb.value;
-      exportSinglePartyPDF(partyName);
-      count++;
-      // Small delay between downloads so browser doesn't block multiple files
-      await new Promise(resolve => setTimeout(resolve, 400));
-    }
-
-    alert(`${count} parties ke separate ledger PDFs download ho gaye hain!`);
   }
 
   function downloadAllDuesPDF(type) {
