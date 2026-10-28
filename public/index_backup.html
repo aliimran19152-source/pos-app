@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Shop POS & Super Admin System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root { --primary-color: #1e293b; --accent-color: #2563eb; --bg-light: #f1f5f9; }
+    body { background-color: var(--bg-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .sidebar { background-color: var(--primary-color); min-height: 100vh; color: #fff; }
+    .sidebar .nav-link, .mobile-nav-link { color: #94a3b8; font-size: 1rem; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; text-decoration: none; display: block; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active, .mobile-nav-link.active { background-color: #334155; color: #fff; }
+    .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .auth-container { max-width: 420px; margin: 60px auto; }
+    .pwd-wrapper { position: relative; }
+    .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
+    .mobile-header { background-color: var(--primary-color); color: white; padding: 10px 15px; }
+    .multi-entry-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+    .img-preview { max-height: 80px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; }
+    .pricing-card { border: 1px solid #e2e8f0; border-radius: 10px; transition: 0.3s; }
+    .pricing-card:hover { border-color: #2563eb; transform: translateY(-2px); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN / SIGNUP SCREEN -->
+<div id="authScreen" class="container">
+  <div class="card card-stat p-4 auth-container bg-white shadow-lg">
+    <div class="text-center mb-3">
+      <h3 class="fw-bold text-primary"><i class="fa-solid fa-shop me-2"></i>SMART POS</h3>
+      <p class="text-muted small" id="authTitle">Sign in with Unique Phone Number</p>
+    </div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Phone Number (Login ID)</label>
+        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Password</label>
+        <div class="pwd-wrapper">
+          <input type="password" id="loginPass" class="form-control" placeholder="******" required>
+          <i class="fa-solid fa-eye pwd-toggle" id="toggleLoginPass" onclick="togglePasswordVisibility('loginPass', 'toggleLoginPass')"></i>
+        </div>
+      </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="rememberMe">
+        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
+      </div>
+      <button type="submit" id="loginBtn" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
+      <div class="text-center mb-2">
+        <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth(true)">Naya Account Banao</a></small>
+      </div>
+    </form>
+
+    <form id="registerForm" class="d-none" onsubmit="handleRegister(event)">
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Business Name</label>
+        <input type="text" id="regBizName" class="form-control" placeholder="e.g. M TEX" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Phone Number (Unique Login ID)</label>
+        <input type="text" id="regPhone" class="form-control" placeholder="03001234567" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Password</label>
+        <div class="pwd-wrapper">
+          <input type="password" id="regPass" class="form-control" placeholder="******" required>
+          <i class="fa-solid fa-eye pwd-toggle" id="toggleRegPass" onclick="togglePasswordVisibility('regPass', 'toggleRegPass')"></i>
+        </div>
+      </div>
+      <button type="submit" id="regBtn" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
+      <div class="text-center">
+        <small class="text-muted">Pehle se account hai? <a href="#" onclick="toggleAuth(false)">Login Karein</a></small>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SUPER ADMIN DASHBOARD PANEL -->
+<div id="superAdminApp" class="container-fluid d-none p-3 p-md-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <h3 class="fw-bold text-danger mb-0"><i class="fa-solid fa-user-shield me-2"></i>Super Admin Control Panel</h3>
+    <button class="btn btn-outline-danger fw-bold btn-sm" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout Admin</button>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card card-stat p-3 bg-white">
+        <small class="text-muted fw-bold" style="font-size:11px;">TOTAL USERS</small>
+        <h3 class="fw-bold text-primary mb-0" id="adminTotalUsers">0</h3>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-stat p-3 bg-white">
+        <small class="text-muted fw-bold" style="font-size:11px;">ACTIVE SUBSCRIPTIONS</small>
+        <h3 class="fw-bold text-success mb-0" id="adminActiveUsers">0</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING TIERS REFERENCE CARD -->
+  <div class="card card-stat p-3 bg-white mb-4">
+    <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-tags me-2"></i>Subscription Pricing Guide</h6>
+    <div class="row g-2 text-center">
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>7 Days</strong><div class="text-success small fw-bold">Trial</div></div></div>
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>1 Month</strong><div class="text-primary small fw-bold">$30</div></div></div>
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>3 Months</strong><div class="text-primary small fw-bold">$70</div></div></div>
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>6 Months</strong><div class="text-primary small fw-bold">$120</div></div></div>
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>1 Year</strong><div class="text-primary small fw-bold">$200</div></div></div>
+      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>10 Years</strong><div class="text-danger small fw-bold">Lifetime</div></div></div>
+    </div>
+  </div>
+
+  <!-- REGISTERED USERS MANAGEMENT TABLE -->
+  <div class="card card-stat p-3 bg-white mb-4">
+    <h5 class="fw-bold mb-3">User Access & Subscription Approvals</h5>
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered text-center align-middle" style="font-size:14px;">
+        <thead class="table-dark">
+          <tr>
+            <th>Business Name</th>
+            <th>Phone ID</th>
+            <th>Current Plan</th>
+            <th>Expiry Date</th>
+            <th>Access Status</th>
+            <th>Action / Assign Plan</th>
+          </tr>
+        </thead>
+        <tbody id="adminUsersTableBody">
+          <tr><td colspan="6" class="text-muted">Loading users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADMIN PASSWORD UPDATE SECTION -->
+  <div class="card card-stat p-3 bg-white" style="max-width:400px;">
+    <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
+    <div class="input-group input-group-sm mb-2">
+      <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password">
+      <button class="btn btn-danger fw-bold" onclick="updateAdminPass()">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN POS SYSTEM (FOR NORMAL USERS) -->
+<div id="mainApp" class="container-fluid d-none p-0">
+  <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
+    <div class="container-fluid">
+      <div class="d-flex align-items-center">
+        <h6 class="fw-bold text-white mb-0" id="mobileBizName">My Shop</h6>
+        <span class="badge bg-success ms-2" style="font-size:10px;"><i class="fa-solid fa-shield-halved me-1"></i> Active License</span>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse mt-2" id="mobileMenu">
+        <div class="nav flex-column" role="tablist">
+          <a class="mobile-nav-link active" data-bs-toggle="pill" data-bs-target="#tabDashboard" onclick="closeMobileMenu()"><i class="fa-solid fa-chart-line me-2"></i> POS Dashboard</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabCustomers" onclick="closeMobileMenu()"><i class="fa-solid fa-users me-2"></i> Customers</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabSuppliers" onclick="closeMobileMenu()"><i class="fa-solid fa-truck-field me-2"></i> Suppliers</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabLedger" onclick="closeMobileMenu()"><i class="fa-solid fa-book-bookmark me-2"></i> Ledger Search</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabDues" onclick="closeMobileMenu()"><i class="fa-solid fa-coins me-2"></i> Combined Dues</a>
+          <a class="mobile-nav-link" data-bs-toggle="pill" data-bs-target="#tabReports" onclick="closeMobileMenu()"><i class="fa-solid fa-file-invoice me-2"></i> Reports & Export</a>
+          <a class="mobile-nav-link text-danger mt-2 fw-bold" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="row g-0">
+    <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block">
+      <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
+        <div>
+          <h6 class="fw-bold text-white mb-0" id="sidebarBizName">My Shop</h6>
+          <small class="text-muted" id="sidebarPhone">03000000000</small><br>
+          <span class="badge bg-success mt-1" style="font-size:10px;" id="licenseBadge"><i class="fa-solid fa-shield-halved me-1"></i> Active License</span>
+        </div>
+      </div>
+
+      <div class="nav flex-column nav-pills" role="tablist">
+        <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tabDashboard"><i class="fa-solid fa-chart-line me-2"></i> POS Dashboard</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabCustomers"><i class="fa-solid fa-users me-2"></i> Customers</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabSuppliers"><i class="fa-solid fa-truck-field me-2"></i> Suppliers</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabLedger"><i class="fa-solid fa-book-bookmark me-2"></i> Ledger Search</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabDues"><i class="fa-solid fa-coins me-2"></i> Combined Dues</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabReports"><i class="fa-solid fa-file-invoice me-2"></i> Reports & Export</button>
+        <button class="nav-link text-start text-danger mt-4" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</button>
+      </div>
+    </div>
+
+    <div class="col-md-9 col-lg-10 p-3 p-md-4">
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tabDashboard">
+          <div class="d-flex justify-content-between align-items-center mb-3 mb-md-4">
+            <h4 class="fw-bold mb-0" id="dashWelcomeTitle">Dashboard</h4>
+            <button class="btn btn-primary fw-bold btn-sm btn-md-normal" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Multi-Item Entry</button>
+          </div>
+
+          <div class="row g-2 g-md-3 mb-3">
+            <div class="col-6 col-md-3"><div class="card card-stat p-2 p-md-3 bg-white"><small class="text-muted fw-bold" style="font-size: 11px;">CUSTOMER DUES</small><h4 class="fw-bold text-danger mb-0" id="dashTotalCustomerDue">Rs. 0</h4></div></div>
+            <div class="col-6 col-md-3"><div class="card card-stat p-2 p-md-3 bg-white"><small class="text-muted fw-bold" style="font-size: 11px;">SUPPLIER PAYABLE</small><h4 class="fw-bold text-warning mb-0" id="dashTotalSupplierDue">Rs. 0</h4></div></div>
+            <div class="col-6 col-md-3"><div class="card card-stat p-2 p-md-3 bg-white"><small class="text-muted fw-bold" style="font-size: 11px;">TOTAL SALES</small><h4 class="fw-bold text-success mb-0" id="dashTotalSales">Rs. 0</h4></div></div>
+            <div class="col-6 col-md-3"><div class="card card-stat p-2 p-md-3 bg-white"><small class="text-muted fw-bold" style="font-size: 11px;">TOTAL RETURNS</small><h4 class="fw-bold text-primary mb-0" id="dashTotalReturns">Rs. 0</h4></div></div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-8"><div class="card card-stat p-3 bg-white"><h6 class="fw-bold mb-3">Sales, Purchases & Dues Breakdown</h6><canvas id="mainBusinessChart" height="150"></canvas></div></div>
+            <div class="col-12 col-md-4"><div class="card card-stat p-3 bg-white"><h6 class="fw-bold mb-3">Payment Methods Share</h6><canvas id="paymentMethodChart" height="200"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabCustomers">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0">Customers</h4>
+            <button class="btn btn-success fw-bold btn-sm" onclick="openAddPartyModal('Customer')"><i class="fa-solid fa-user-plus me-1"></i> Add Customer</button>
+          </div>
+          <div class="card card-stat p-2 p-md-3 bg-white">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered text-center align-middle" style="font-size: 14px;">
+                <thead class="table-dark"><tr><th>Customer</th><th>Phone</th><th>Net Due</th><th>Action</th></tr></thead>
+                <tbody id="customersTableBody"><tr><td colspan="4" class="text-muted">No customers added yet.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabSuppliers">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0">Suppliers</h4>
+            <button class="btn btn-warning fw-bold text-dark btn-sm" onclick="openAddPartyModal('Supplier')"><i class="fa-solid fa-truck me-1"></i> Add Supplier</button>
+          </div>
+          <div class="card card-stat p-2 p-md-3 bg-white">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered text-center align-middle" style="font-size: 14px;">
+                <thead class="table-dark"><tr><th>Supplier</th><th>Phone</th><th>Net Payable</th><th>Action</th></tr></thead>
+                <tbody id="suppliersTableBody"><tr><td colspan="4" class="text-muted">No suppliers added yet.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabLedger">
+          <h4 class="fw-bold mb-3">Party Ledger Search</h4>
+          <div class="card card-stat p-3 bg-white mb-3">
+            <div class="row g-2 align-items-center">
+              <div class="col-12 col-md-6"><input type="text" id="partySearchInput" class="form-control" placeholder="Search Name..." oninput="searchPartyLedger()"></div>
+              <div class="col-8 col-md-3">
+                <select id="partyRoleFilter" class="form-select" onchange="searchPartyLedger()">
+                  <option value="ALL">All Parties</option>
+                  <option value="Customer">Customers</option>
+                  <option value="Supplier">Suppliers</option>
+                </select>
+              </div>
+              <div class="col-4 col-md-3 text-end"><button class="btn btn-outline-danger w-100 fw-bold" onclick="generatePartyLedgerPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Download PDF</button></div>
+            </div>
+          </div>
+
+          <div class="card card-stat p-2 p-md-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0" id="selectedPartyName">Select a Party</h5>
+              <h4 class="fw-bold text-danger mb-0" id="selectedPartyBalance">Rs. 0</h4>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered text-center align-middle" style="font-size: 13px;">
+                <thead class="table-dark"><tr><th>Date</th><th>Bill #</th><th>Type</th><th>Amount</th><th>Bill Pic</th><th>Action</th></tr></thead>
+                <tbody id="partyLedgerBody"><tr><td colspan="6" class="text-muted">Search customer/supplier above.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabDues">
+          <h4 class="fw-bold mb-3">Market Dues Summary</h4>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <div class="card card-stat p-3 bg-white">
+                <h6 class="fw-bold text-danger mb-2">Customer Dues List</h6>
+                <div class="table-responsive"><table class="table table-striped table-bordered text-center" style="font-size: 13px;"><thead class="table-dark"><tr><th>Customer</th><th>Net Due</th></tr></thead><tbody id="customerDuesBody"></tbody></table></div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="card card-stat p-3 bg-white">
+                <h6 class="fw-bold text-warning mb-2">Supplier Dues List</h6>
+                <div class="table-responsive"><table class="table table-striped table-bordered text-center" style="font-size: 13px;"><thead class="table-dark"><tr><th>Supplier</th><th>Net Payable</th></tr></thead><tbody id="supplierDuesBody"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabReports">
+          <h4 class="fw-bold mb-3">Reports & Export</h4>
+          <div class="row g-2">
+            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-excel text-success fa-2x mb-2"></i><button onclick="exportToExcel()" class="btn btn-sm btn-success fw-bold w-100">Excel Export</button></div></div>
+            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Customer Dues PDF</button></div></div>
+            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-warning fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-sm btn-warning fw-bold w-100 text-dark">Supplier Dues PDF</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MULTI-ITEM ENTRY MODAL -->
+<div class="modal fade" id="entryModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white p-2 px-3">
+        <h6 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Single Bill Multi-Transaction Entry</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="fastForm" onsubmit="saveTransaction(event)">
+          <div class="row g-2 mb-2">
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Party Role</label>
+              <select id="entryRole" class="form-select form-select-sm fw-bold" onchange="resetMultiRows(); updatePartySuggestions();">
+                <option value="Customer">Customer</option>
+                <option value="Supplier">Supplier</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Name</label>
+              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" list="partySuggestions" required autocomplete="off">
+              <datalist id="partySuggestions"></datalist>
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label small fw-bold">Bill No.</label>
+              <input type="text" id="entryBillNo" class="form-control form-control-sm" placeholder="INV-101" required>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center my-2">
+            <label class="form-label small fw-bold mb-0">Bill Items / Transactions</label>
+            <button type="button" class="btn btn-sm btn-outline-success fw-bold" onclick="addMultiRow()"><i class="fa-solid fa-plus me-1"></i> Add Item/Entry</button>
+          </div>
+
+          <div id="multiRowsContainer"></div>
+
+          <div class="row g-2 mb-2 mt-2">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Date</label>
+              <input type="date" id="entryDate" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-6" id="paymentMethodWrapper">
+              <label class="form-label small fw-bold">Payment Method</label>
+              <select id="entryMethod" class="form-select form-select-sm">
+                <option value="Cash">Cash</option>
+                <option value="Online / Bank">Online / Bank</option>
+                <option value="Cheque">Cheque</option>
+                <option value="JazzCash">JazzCash</option>
+                <option value="EasyPaisa">EasyPaisa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-bold"><i class="fa-solid fa-camera me-1"></i> Attach Bill Picture (Optional)</label>
+            <input type="file" id="entryBillImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event, 'billImgPreview')">
+            <img id="billImgPreview" class="img-preview d-none" alt="Bill Preview">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Notes</label>
+            <input type="text" id="entryNotes" class="form-control form-control-sm" placeholder="Optional details">
+          </div>
+
+          <button type="submit" id="saveTxBtn" class="btn btn-primary w-100 fw-bold">Save Complete Bill</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PARTY MODAL -->
+<div class="modal fade" id="addPartyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white p-2 px-3">
+        <h6 class="modal-title fw-bold" id="addPartyModalTitle">Add New Party</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addPartyForm" onsubmit="saveParty(event)">
+          <input type="hidden" id="partyRoleInput">
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Name</label>
+            <input type="text" id="partyNameInput" class="form-control" placeholder="Full Name" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Phone Number</label>
+            <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
+          </div>
+          
+          <div class="p-2 border rounded bg-light mb-3">
+            <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-book-open me-1"></i> Purana Khaya / Opening Balance</label>
+            <div class="row g-2 mb-2">
+              <div class="col-7">
+                <input type="number" id="partyOpeningBal" class="form-control form-control-sm" placeholder="Amount (Rs. 0)">
+              </div>
+              <div class="col-5">
+                <select id="partyOpeningType" class="form-select form-select-sm fw-bold">
+                  <option value="RECEIVABLE">Lene hain (Due)</option>
+                  <option value="PAYABLE">Dene hain (Payable)</option>
+                </select>
+              </div>
+            </div>
+            
+            <div>
+              <label class="form-label small fw-bold text-secondary mb-1"><i class="fa-solid fa-camera me-1"></i> Purana Khata Proof / Register Pic (Optional)</label>
+              <input type="file" id="partyOpeningImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event, 'openingImgPreview')">
+              <img id="openingImgPreview" class="img-preview d-none" alt="Opening Balance Preview">
+            </div>
+          </div>
+
+          <button type="submit" id="savePartyBtn" class="btn btn-success w-100 fw-bold">Save Party</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW BILL PICTURE MODAL -->
+<div class="modal fade" id="viewImgModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-2">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="fw-bold mb-0">Attached Bill / Proof Picture</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img id="modalBillImage" src="" class="img-fluid rounded border" alt="Attached Proof">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let currentUser = null;
+  let userTransactions = [];
+  let userParties = [];
+  let currentBillBase64 = "";
+  let currentOpeningBase64 = "";
+  let mainChart = null, methodChart = null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
+    const savedPhone = localStorage.getItem("pos_remember_phone");
+    const savedPass = localStorage.getItem("pos_remember_pass");
+    if (savedPhone && savedPass) {
+      document.getElementById("loginPhone").value = savedPhone;
+      document.getElementById("loginPass").value = savedPass;
+      document.getElementById("rememberMe").checked = true;
+    }
+  });
+
+  function closeMobileMenu() {
+    let bsCollapse = new bootstrap.Collapse(document.getElementById('mobileMenu'), { toggle: false });
+    bsCollapse.hide();
+  }
+
+  function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (input.type === "password") {
+      input.type = "text";
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    } else {
+      input.type = "password";
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
+    }
+  }
+
+  function toggleAuth(isRegister) {
+    if(isRegister) {
+      document.getElementById("loginForm").classList.add("d-none");
+      document.getElementById("registerForm").classList.remove("d-none");
+      document.getElementById("authTitle").innerText = "Create Business Account";
+    } else {
+      document.getElementById("registerForm").classList.add("d-none");
+      document.getElementById("loginForm").classList.remove("d-none");
+      document.getElementById("authTitle").innerText = "Sign in with Unique Phone Number";
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    let btn = document.getElementById("regBtn");
+    btn.disabled = true;
+
+    let phone = document.getElementById("regPhone").value.trim();
+    let pass = document.getElementById("regPass").value.trim();
+    let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
+
+    try {
+      let res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, pass, bizName })
+      });
+      let data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+        btn.disabled = false;
+        return;
+      }
+      alert("Account register ho gaya hai! Super Admin permission ke baad login hoga.");
+      toggleAuth(false);
+    } catch(err) {
+      alert("Server Connection Error!");
+    }
+    btn.disabled = false;
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    let btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+
+    let phoneInput = document.getElementById("loginPhone").value.trim();
+    let passInput = document.getElementById("loginPass").value.trim();
+    let remember = document.getElementById("rememberMe").checked;
+
+    try {
+      let res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput, pass: passInput })
+      });
+      let resData = await res.json();
+      
+      if (!res.ok) {
+        alert(resData.error);
+        btn.disabled = false;
+        return;
+      }
+
+      if (remember) {
+        localStorage.setItem("pos_remember_phone", phoneInput);
+        localStorage.setItem("pos_remember_pass", passInput);
+      } else {
+        localStorage.removeItem("pos_remember_phone");
+        localStorage.removeItem("pos_remember_pass");
+      }
+
+      if (resData.isAdmin) {
+        showSuperAdminApp();
+      } else {
+        currentUser = resData.data.profile;
+        userTransactions = resData.data.transactions || [];
+        userParties = resData.data.parties || [];
+        showApp();
+      }
+
+    } catch(err) {
+      alert("Server Connection Error!");
+    }
+    btn.disabled = false;
+  }
+
+  async function showSuperAdminApp() {
+    document.getElementById("authScreen").classList.add("d-none");
+    document.getElementById("superAdminApp").classList.remove("d-none");
+    await loadAdminUsersList();
+  }
+
+  async function loadAdminUsersList() {
+    try {
+      let res = await fetch('/api/admin/get-users');
+      let data = await res.json();
+      if (data.success) {
+        let users = data.users;
+        document.getElementById("adminTotalUsers").innerText = users.length;
+        let activeCount = users.filter(u => u.isApproved).length;
+        document.getElementById("adminActiveUsers").innerText = activeCount;
+
+        let tbody = document.getElementById("adminUsersTableBody");
+        let html = "";
+
+        users.forEach(u => {
+          let statusBadge = u.isApproved ? `<span class="badge bg-success">Active Access</span>` : `<span class="badge bg-danger">Access Blocked</span>`;
+          let exp = u.expiryDate ? u.expiryDate : "Lifetime / Pending";
+
+          html += `
+            <tr>
+              <td><strong>${u.bizName}</strong></td>
+              <td>${u.phone}</td>
+              <td><span class="badge bg-info text-dark">${u.plan || 'No Plan'}</span></td>
+              <td class="fw-bold">${exp}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <select class="form-select form-select-sm d-inline-block w-auto me-1" id="planSelect_${u.phone}">
+                  <option value="7_7 Days Trial">7 Days Trial</option>
+                  <option value="30_1 Month ($30)">1 Month ($30)</option>
+                  <option value="90_3 Months ($70)">3 Months ($70)</option>
+                  <option value="180_6 Months ($120)">6 Months ($120)</option>
+                  <option value="365_1 Year ($200)">1 Year ($200)</option>
+                  <option value="3650_10 Years Lifetime">10 Years Lifetime</option>
+                </select>
+                <button class="btn btn-sm btn-success fw-bold me-1" onclick="approveUserPlan('${u.phone}', true)">Approve</button>
+                <button class="btn btn-sm btn-danger fw-bold" onclick="approveUserPlan('${u.phone}', false)">Block</button>
+              </td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html || `<tr><td colspan="6" class="text-muted">No users registered yet.</td></tr>`;
+      }
+    } catch(e) {}
+  }
+
+  async function approveUserPlan(phone, isApproved) {
+    let sel = document.getElementById(`planSelect_${phone}`);
+    let val = sel ? sel.value : "30_1 Month ($30)";
+    let parts = val.split('_');
+    let days = Number(parts[0]);
+    let planName = parts[1];
+
+    try {
+      let res = await fetch('/api/admin/update-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPhone: phone, isApproved, days, planName })
+      });
+      let data = await res.json();
+      if (data.success) {
+        alert("User Access & Subscription Updated!");
+        loadAdminUsersList();
+      }
+    } catch(e) {}
+  }
+
+  async function updateAdminPass() {
+    let pass = document.getElementById("newAdminPass").value.trim();
+    if (!pass) return alert("Enter new password!");
+
+    try {
+      let res = await fetch('/api/admin/update-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPass: pass })
+      });
+      let data = await res.json();
+      if (data.success) {
+        alert("Super Admin Password updated successfully!");
+        document.getElementById("newAdminPass").value = "";
+      }
+    } catch(e) {}
+  }
+
+  function showApp() {
+    document.getElementById("authScreen").classList.add("d-none");
+    document.getElementById("mainApp").classList.remove("d-none");
+    
+    let name = currentUser.bizName || "My Shop";
+    document.getElementById("sidebarBizName").innerText = name;
+    document.getElementById("mobileBizName").innerText = name;
+    document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
+    document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + name;
+
+    refreshDashboard();
+    renderPartiesTables();
+  }
+
+  async function saveToServer() {
+    try {
+      await fetch('/api/save-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: currentUser.phone,
+          transactions: userTransactions,
+          parties: userParties
+        })
+      });
+    } catch(e) {}
+  }
+
+  function handleLogout() {
+    currentUser = null;
+    document.getElementById("mainApp").classList.add("d-none");
+    document.getElementById("superAdminApp").classList.add("d-none");
+    document.getElementById("authScreen").classList.remove("d-none");
+  }
+
+  function previewBillImage(event, targetImgId) {
+    let file = event.target.files[0];
+    if (file) {
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        if (targetImgId === 'billImgPreview') currentBillBase64 = e.target.result;
+        if (targetImgId === 'openingImgPreview') currentOpeningBase64 = e.target.result;
+        
+        let img = document.getElementById(targetImgId);
+        img.src = e.target.result;
+        img.classList.remove("d-none");
+      }
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function openEntryModal() {
+    resetMultiRows();
+    updatePartySuggestions();
+    currentBillBase64 = "";
+    document.getElementById("billImgPreview").classList.add("d-none");
+    document.getElementById("entryBillImg").value = "";
+    new bootstrap.Modal(document.getElementById('entryModal')).show();
+  }
+
+  function updatePartySuggestions() {
+    let role = document.getElementById("entryRole").value;
+    let datalist = document.getElementById("partySuggestions");
+    datalist.innerHTML = "";
+    
+    let names = new Set();
+    userParties.filter(p => p.role === role).forEach(p => names.add(p.name));
+    userTransactions.filter(t => t.role === role).forEach(t => names.add(t.name));
+
+    names.forEach(n => {
+      let opt = document.createElement("option");
+      opt.value = n;
+      datalist.appendChild(opt);
+    });
+  }
+
+  function resetMultiRows() {
+    document.getElementById("multiRowsContainer").innerHTML = "";
+    addMultiRow();
+  }
+
+  function addMultiRow() {
+    let role = document.getElementById("entryRole").value;
+    let container = document.getElementById("multiRowsContainer");
+    
+    let options = role === "Supplier" ? `
+      <option value="PURCHASE_CREDIT">Purchase on Credit (Khareeda Udhar)</option>
+      <option value="PURCHASE_CASH">Purchase Cash (Naqad Khareeda)</option>
+      <option value="PAYMENT_PAID">Payment Paid (Paisa Diya)</option>
+      <option value="PURCHASE_RETURN">Purchase Return</option>
+    ` : `
+      <option value="SALE_CREDIT">Sell on Credit (Becha Udhar)</option>
+      <option value="SALE_CASH">Sell Cash (Naqad Becha)</option>
+      <option value="PAYMENT_REC">Payment Received (Paisa Mila)</option>
+      <option value="SALE_RETURN">Sale Return</option>
+    `;
+
+    let rowDiv = document.createElement("div");
+    rowDiv.className = "multi-entry-row";
+    rowDiv.innerHTML = `
+      <div class="row g-2 align-items-center">
+        <div class="col-7">
+          <select class="form-select form-select-sm entry-row-type fw-bold" onchange="checkPaymentVisibility()">${options}</select>
+        </div>
+        <div class="col-3">
+          <input type="number" class="form-control form-control-sm entry-row-amount fw-bold text-success" placeholder="Amount" required oninput="checkPaymentVisibility()">
+        </div>
+        <div class="col-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.multi-entry-row').remove(); checkPaymentVisibility();"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+    container.appendChild(rowDiv);
+    checkPaymentVisibility();
+  }
+
+  function checkPaymentVisibility() {
+    let rowTypes = document.querySelectorAll(".entry-row-type");
+    let hasCashOrPayment = false;
+    rowTypes.forEach(el => {
+      let val = el.value;
+      if (val === "SALE_CASH" || val === "PURCHASE_CASH" || val === "PAYMENT_REC" || val === "PAYMENT_PAID") {
+        hasCashOrPayment = true;
+      }
+    });
+
+    let pmWrapper = document.getElementById("paymentMethodWrapper");
+    if (hasCashOrPayment) {
+      pmWrapper.classList.remove("d-none");
+    } else {
+      pmWrapper.classList.add("d-none");
+    }
+  }
+
+  function openAddPartyModal(role) {
+    document.getElementById("partyRoleInput").value = role;
+    document.getElementById("addPartyModalTitle").innerText = "Add New " + role;
+    currentOpeningBase64 = "";
+    document.getElementById("openingImgPreview").classList.add("d-none");
+    document.getElementById("partyOpeningImg").value = "";
+    new bootstrap.Modal(document.getElementById('addPartyModal')).show();
+  }
+
+  async function saveParty(e) {
+    e.preventDefault();
+    let role = document.getElementById("partyRoleInput").value;
+    let rawName = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
+    let phone = document.getElementById("partyPhoneInput").value.trim();
+    let openingBal = parseFloat(document.getElementById("partyOpeningBal").value) || 0;
+    let openingType = document.getElementById("partyOpeningType").value;
+
+    let existing = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
+    if(!existing) {
+      userParties.push({ id: Date.now(), role, name: rawName, phone });
+
+      if (openingBal > 0) {
+        let txType = "";
+        if (role === "Customer") {
+          txType = openingType === "RECEIVABLE" ? "SALE_CREDIT" : "PAYMENT_REC";
+        } else {
+          txType = openingType === "PAYABLE" ? "PURCHASE_CREDIT" : "PAYMENT_PAID";
+        }
+
+        userTransactions.push({
+          id: Date.now() + 1,
+          role,
+          name: rawName,
+          billNo: "OPENING-BAL",
+          type: txType,
+          amount: openingBal,
+          method: "Cash",
+          date: new Date().toISOString().split('T')[0],
+          notes: "Purana Bakaya / Opening Balance Entry",
+          img: currentOpeningBase64
+        });
+      }
+
+      await saveToServer();
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
+    document.getElementById("addPartyForm").reset();
+    refreshDashboard();
+    renderPartiesTables();
+  }
+
+  async function deleteParty(name, role) {
+    if (confirm(`Kya aap ${role} "${name}" aur iski saari transactions delete karna chahte hain?`)) {
+      userParties = userParties.filter(p => !(p.name.toLowerCase() === name.toLowerCase() && p.role === role));
+      userTransactions = userTransactions.filter(t => !(t.name.toLowerCase() === name.toLowerCase() && t.role === role));
+      await saveToServer();
+      refreshDashboard();
+      renderPartiesTables();
+      searchPartyLedger();
+    }
+  }
+
+  async function saveTransaction(e) {
+    e.preventDefault();
+    let role = document.getElementById("entryRole").value;
+    let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
+    
+    let existingParty = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
+    let name = existingParty ? existingParty.name : rawName;
+
+    let billNo = document.getElementById("entryBillNo").value.trim();
+    let method = document.getElementById("entryMethod").value;
+    let date = document.getElementById("entryDate").value;
+    let notes = document.getElementById("entryNotes").value.trim();
+
+    let rowTypes = document.querySelectorAll(".entry-row-type");
+    let rowAmounts = document.querySelectorAll(".entry-row-amount");
+
+    rowTypes.forEach((typeEl, index) => {
+      let type = typeEl.value;
+      let amount = parseFloat(rowAmounts[index].value) || 0;
+
+      if (amount > 0) {
+        let tx = { id: Date.now() + Math.random(), role, name, billNo, type, amount, method, date, notes, img: currentBillBase64 };
+        userTransactions.push(tx);
+      }
+    });
+
+    if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
+      userParties.push({ id: Date.now(), role, name: '-' });
+    }
+
+    await saveToServer();
+
+    bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+    document.getElementById("fastForm").reset();
+    document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
+    
+    refreshDashboard();
+    renderPartiesTables();
+    searchPartyLedger();
+  }
+
+  function refreshDashboard() {
+    let custDue = 0, suppDue = 0, totalSales = 0, totalReturns = 0;
+    let methodShare = { Cash: 0, "Online / Bank": 0, Cheque: 0, JazzCash: 0, EasyPaisa: 0 };
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (t.type === "SALE_CREDIT") custDue += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custDue -= t.amount;
+        
+        if (t.type === "SALE_CREDIT" || t.type === "SALE_CASH") totalSales += t.amount;
+        if (t.type === "SALE_RETURN") totalReturns += t.amount;
+      } else {
+        if (t.type === "PURCHASE_CREDIT") suppDue += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppDue -= t.amount;
+        
+        if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
+      }
+
+      if ((t.type === "SALE_CASH" || t.type === "PURCHASE_CASH" || t.type === "PAYMENT_REC" || t.type === "PAYMENT_PAID") && methodShare[t.method] !== undefined) {
+        methodShare[t.method] += t.amount;
+      }
+    });
+
+    document.getElementById("dashTotalCustomerDue").innerText = "Rs. " + custDue.toLocaleString();
+    document.getElementById("dashTotalSupplierDue").innerText = "Rs. " + suppDue.toLocaleString();
+    document.getElementById("dashTotalSales").innerText = "Rs. " + totalSales.toLocaleString();
+    document.getElementById("dashTotalReturns").innerText = "Rs. " + totalReturns.toLocaleString();
+
+    renderDuesLists();
+    renderCharts(totalSales, custDue, suppDue, methodShare);
+  }
+
+  function renderPartiesTables() {
+    let custBody = document.getElementById("customersTableBody");
+    let suppBody = document.getElementById("suppliersTableBody");
+
+    let custMap = {}, suppMap = {};
+
+    userParties.forEach(p => {
+      if (p.role === "Customer") custMap[p.name] = { phone: p.phone, total: 0, paid: 0 };
+      if (p.role === "Supplier") suppMap[p.name] = { phone: p.phone, total: 0, paid: 0 };
+    });
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (!custMap[t.name]) custMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (t.type === "SALE_CREDIT") custMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custMap[t.name].paid += t.amount;
+      } else {
+        if (!suppMap[t.name]) suppMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (t.type === "PURCHASE_CREDIT") suppMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppMap[t.name].paid += t.amount;
+      }
+    });
+
+    let custHtml = "", suppHtml = "";
+
+    for (let c in custMap) {
+      let net = custMap[c].total - custMap[c].paid;
+      custHtml += `
+        <tr>
+          <td>${c}</td>
+          <td>${custMap[c].phone}</td>
+          <td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View</button>
+            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="deleteParty('${c}', 'Customer')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    }
+
+    for (let s in suppMap) {
+      let net = suppMap[s].total - suppMap[s].paid;
+      suppHtml += `
+        <tr>
+          <td>${s}</td>
+          <td>${suppMap[s].phone}</td>
+          <td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View</button>
+            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="deleteParty('${s}', 'Supplier')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    }
+
+    custBody.innerHTML = custHtml || `<tr><td colspan="4" class="text-muted">No customers found.</td></tr>`;
+    suppBody.innerHTML = suppHtml || `<tr><td colspan="4" class="text-muted">No suppliers found.</td></tr>`;
+  }
+
+  function viewPartyLedger(name, role) {
+    document.getElementById("partySearchInput").value = name;
+    document.getElementById("partyRoleFilter").value = role;
+    let ledgerTabTrigger = new bootstrap.Tab(document.querySelector('[data-bs-target="#tabLedger"]'));
+    ledgerTabTrigger.show();
+    searchPartyLedger();
+  }
+
+  function renderDuesLists() {
+    let custMap = {}, suppMap = {};
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (!custMap[t.name]) custMap[t.name] = { total: 0, paid: 0 };
+        if (t.type === "SALE_CREDIT") custMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custMap[t.name].paid += t.amount;
+      } else {
+        if (!suppMap[t.name]) suppMap[t.name] = { total: 0, paid: 0 };
+        if (t.type === "PURCHASE_CREDIT") suppMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppMap[t.name].paid += t.amount;
+      }
+    });
+
+    let custHtml = "", suppHtml = "";
+    for (let c in custMap) {
+      let net = custMap[c].total - custMap[c].paid;
+      custHtml += `<tr><td>${c}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
+    }
+    for (let s in suppMap) {
+      let net = suppMap[s].total - suppMap[s].paid;
+      suppHtml += `<tr><td>${s}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
+    }
+
+    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
+    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
+  }
+
+  function searchPartyLedger() {
+    let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
+    let role = document.getElementById("partyRoleFilter").value;
+    let tbody = document.getElementById("partyLedgerBody");
+
+    if (!query) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">Search customer/supplier above.</td></tr>`;
+      document.getElementById("selectedPartyName").innerText = "Select a Party";
+      document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
+      return;
+    }
+
+    let filtered = userTransactions.filter(t => {
+      let matchQuery = t.name.toLowerCase().includes(query);
+      let matchRole = (role === "ALL") || (t.role === role);
+      return matchQuery && matchRole;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found.</td></tr>`;
+      return;
+    }
+
+    document.getElementById("selectedPartyName").innerText = filtered[0].name;
+
+    let netBalance = 0, rows = "";
+    filtered.forEach(t => {
+      if (t.type === "SALE_CREDIT" || t.type === "PURCHASE_CREDIT") netBalance += t.amount;
+      else netBalance -= t.amount;
+
+      let picBtn = t.img ? `<button class="btn btn-sm btn-outline-info" onclick="viewBillPic('${t.id}')"><i class="fa-solid fa-image"></i> Pic</button>` : `<span class="text-muted small">No Pic</span>`;
+
+      rows += `
+        <tr>
+          <td>${t.date}</td>
+          <td>${t.billNo}</td>
+          <td><span class="badge bg-secondary">${t.type}</span></td>
+          <td class="fw-bold">Rs. ${t.amount.toLocaleString()}</td>
+          <td>${picBtn}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = rows;
+    document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
+  }
+
+  function viewBillPic(id) {
+    let tx = userTransactions.find(t => t.id == id);
+    if (tx && tx.img) {
+      document.getElementById("modalBillImage").src = tx.img;
+      new bootstrap.Modal(document.getElementById('viewImgModal')).show();
+    }
+  }
+
+  async function deleteTx(id) {
+    userTransactions = userTransactions.filter(t => t.id !== id);
+    await saveToServer();
+    refreshDashboard();
+    renderPartiesTables();
+    searchPartyLedger();
+  }
+
+  function renderCharts(sales, custDue, suppDue, methodShare) {
+    if (mainChart) mainChart.destroy();
+    if (methodChart) methodChart.destroy();
+
+    let ctx1 = document.getElementById('mainBusinessChart').getContext('2d');
+    mainChart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: ['Sales', 'Customer Dues', 'Supplier Dues'],
+        datasets: [{ data: [sales, custDue, suppDue], backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
+
+    let ctx2 = document.getElementById('paymentMethodChart').getContext('2d');
+    methodChart = new Chart(ctx2, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(methodShare),
+        datasets: [{ data: Object.values(methodShare), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0'] }]
+      }
+    });
+  }
+
+  // FIXED LEDGER PDF GENERATOR
+  function generatePartyLedgerPDF() {
+    let partyName = document.getElementById("selectedPartyName").innerText;
+    if (partyName === "Select a Party") {
+      return alert("Pehle kisi party ka ledger search karein!");
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text(`Party Ledger: ${partyName}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Shop Name: ${currentUser ? currentUser.bizName : 'POS System'}`, 14, 22);
+    doc.text(`Net Balance: ${document.getElementById("selectedPartyBalance").innerText}`, 14, 28);
+
+    let rows = [];
+    let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
+    let role = document.getElementById("partyRoleFilter").value;
+
+    let filtered = userTransactions.filter(t => {
+      let matchQuery = t.name.toLowerCase().includes(query);
+      let matchRole = (role === "ALL") || (t.role === role);
+      return matchQuery && matchRole;
+    });
+
+    filtered.forEach(t => {
+      rows.push([t.date, t.billNo, t.type, `Rs. ${t.amount.toLocaleString()}`, t.method || 'Cash', t.notes || '-']);
+    });
+
+    doc.autoTable({
+      startY: 34,
+      head: [['Date', 'Bill #', 'Type', 'Amount', 'Payment Method', 'Notes']],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59] }
+    });
+
+    doc.save(`${partyName}_Ledger_Report.pdf`);
+  }
+
+  // FIXED DUES LIST PDF GENERATOR
+  function downloadAllDuesPDF(type) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text(`${type} Dues Report`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Business Name: ${currentUser ? currentUser.bizName : 'POS System'}`, 14, 22);
+
+    let duesMap = {};
+    userTransactions.forEach(t => {
+      if (t.role === type) {
+        if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 0 };
+        if (type === "Customer") {
+          if (t.type === "SALE_CREDIT") duesMap[t.name].total += t.amount;
+          else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") duesMap[t.name].paid += t.amount;
+        } else {
+          if (t.type === "PURCHASE_CREDIT") duesMap[t.name].total += t.amount;
+          else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") duesMap[t.name].paid += t.amount;
+        }
+      }
+    });
+
+    let rows = [];
+    let grandTotal = 0;
+    for (let name in duesMap) {
+      let net = duesMap[name].total - duesMap[name].paid;
+      if (net !== 0) {
+        grandTotal += net;
+        rows.push([name, `Rs. ${net.toLocaleString()}`]);
+      }
+    }
+
+    doc.autoTable({
+      startY: 28,
+      head: [[`${type} Name`, 'Net Balance']],
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: type === 'Customer' ? [220, 53, 69] : [255, 193, 7] }
+    });
+
+    let finalY = doc.lastAutoTable.previous.finalY || 40;
+    doc.setFontSize(12);
+    doc.text(`Total Dues Amount: Rs. ${grandTotal.toLocaleString()}`, 14, finalY + 10);
+
+    doc.save(`${type}_Dues_Report.pdf`);
+  }
+
+  function exportToExcel() {
+    let ws = XLSX.utils.json_to_sheet(userTransactions);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    XLSX.writeFile(wb, "POS_Data.xlsx");
+  }
+</script>
+</body>
+</html>
