@@ -86,7 +86,7 @@
     <div class="container-fluid">
       <div class="d-flex align-items-center">
         <h6 class="fw-bold text-white mb-0" id="mobileBizName">My Shop</h6>
-        <span class="badge bg-success ms-2" style="font-size:10px;"><i class="fa-solid fa-server me-1"></i> Render Server Sync</span>
+        <span class="badge bg-success ms-2" style="font-size:10px;"><i class="fa-solid fa-shield-halved me-1"></i> Safe Sync</span>
       </div>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
         <span class="navbar-toggler-icon"></span>
@@ -112,7 +112,7 @@
         <div>
           <h6 class="fw-bold text-white mb-0" id="sidebarBizName">My Shop</h6>
           <small class="text-muted" id="sidebarPhone">03000000000</small><br>
-          <span class="badge bg-success mt-1" style="font-size:10px;"><i class="fa-solid fa-server me-1"></i> Render Server File</span>
+          <span class="badge bg-success mt-1" style="font-size:10px;"><i class="fa-solid fa-shield-halved me-1"></i> Safe Server Storage</span>
         </div>
       </div>
 
@@ -238,7 +238,7 @@
   </div>
 </div>
 
-<!-- ENTRY MODAL WITH BILL IMAGE ATTACHMENT -->
+<!-- MULTI-ITEM ENTRY MODAL -->
 <div class="modal fade" id="entryModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -291,10 +291,9 @@
             </div>
           </div>
 
-          <!-- BILL PICTURE ATTACHMENT FIELD -->
           <div class="mb-2">
             <label class="form-label small fw-bold"><i class="fa-solid fa-camera me-1"></i> Attach Bill Picture (Optional)</label>
-            <input type="file" id="entryBillImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event)">
+            <input type="file" id="entryBillImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event, 'billImgPreview')">
             <img id="billImgPreview" class="img-preview d-none" alt="Bill Preview">
           </div>
 
@@ -310,7 +309,7 @@
   </div>
 </div>
 
-<!-- ADD PARTY MODAL WITH PURANA KHATA / OPENING BALANCE -->
+<!-- ADD PARTY MODAL WITH PURANA KHATA & PIC ATTACHMENT -->
 <div class="modal fade" id="addPartyModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -330,10 +329,10 @@
             <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
           </div>
           
-          <!-- PURANA KHATA / OPENING BALANCE FEATURE -->
+          <!-- PURANA KHATA / OPENING BALANCE WITH PIC ATTACHMENT -->
           <div class="p-2 border rounded bg-light mb-3">
             <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-book-open me-1"></i> Purana Khaya / Opening Balance</label>
-            <div class="row g-2">
+            <div class="row g-2 mb-2">
               <div class="col-7">
                 <input type="number" id="partyOpeningBal" class="form-control form-control-sm" placeholder="Amount (Rs. 0)">
               </div>
@@ -343,6 +342,13 @@
                   <option value="PAYABLE">Dene hain (Payable)</option>
                 </select>
               </div>
+            </div>
+            
+            <!-- Opening Balance Pic Attachment -->
+            <div>
+              <label class="form-label small fw-bold text-secondary mb-1"><i class="fa-solid fa-camera me-1"></i> Purana Khata Proof / Register Pic (Optional)</label>
+              <input type="file" id="partyOpeningImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event, 'openingImgPreview')">
+              <img id="openingImgPreview" class="img-preview d-none" alt="Opening Balance Preview">
             </div>
           </div>
 
@@ -358,11 +364,11 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-center p-2">
       <div class="modal-header border-0 pb-0">
-        <h6 class="fw-bold mb-0">Original Attached Bill</h6>
+        <h6 class="fw-bold mb-0">Attached Bill / Proof Picture</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <img id="modalBillImage" src="" class="img-fluid rounded border" alt="Attached Bill">
+        <img id="modalBillImage" src="" class="img-fluid rounded border" alt="Attached Proof">
       </div>
     </div>
   </div>
@@ -375,6 +381,7 @@
   let userTransactions = [];
   let userParties = [];
   let currentBillBase64 = "";
+  let currentOpeningBase64 = "";
   let mainChart = null, methodChart = null;
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -524,14 +531,16 @@
     document.getElementById("authScreen").classList.remove("d-none");
   }
 
-  function previewBillImage(event) {
+  function previewBillImage(event, targetImgId) {
     let file = event.target.files[0];
     if (file) {
       let reader = new FileReader();
       reader.onload = function(e) {
-        currentBillBase64 = e.target.result;
-        let img = document.getElementById("billImgPreview");
-        img.src = currentBillBase64;
+        if (targetImgId === 'billImgPreview') currentBillBase64 = e.target.result;
+        if (targetImgId === 'openingImgPreview') currentOpeningBase64 = e.target.result;
+        
+        let img = document.getElementById(targetImgId);
+        img.src = e.target.result;
         img.classList.remove("d-none");
       }
       reader.readAsDataURL(file);
@@ -624,6 +633,9 @@
   function openAddPartyModal(role) {
     document.getElementById("partyRoleInput").value = role;
     document.getElementById("addPartyModalTitle").innerText = "Add New " + role;
+    currentOpeningBase64 = "";
+    document.getElementById("openingImgPreview").classList.add("d-none");
+    document.getElementById("partyOpeningImg").value = "";
     new bootstrap.Modal(document.getElementById('addPartyModal')).show();
   }
 
@@ -639,7 +651,7 @@
     if(!existing) {
       userParties.push({ id: Date.now(), role, name: rawName, phone });
 
-      // Save Opening Balance as Initial Transaction
+      // Save Purana Khata / Opening Balance with attached Proof Pic
       if (openingBal > 0) {
         let txType = "";
         if (role === "Customer") {
@@ -658,7 +670,7 @@
           method: "Cash",
           date: new Date().toISOString().split('T')[0],
           notes: "Purana Bakaya / Opening Balance Entry",
-          img: ""
+          img: currentOpeningBase64
         });
       }
 
