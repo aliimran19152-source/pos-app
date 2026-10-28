@@ -931,11 +931,11 @@
 
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      custDue += (net !== 0 ? net : 50);
+      custDue += net;
     }
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
-      suppDue += (net !== 0 ? net : 50);
+      suppDue += net;
     }
 
     document.getElementById("dashTotalCustomerDue").innerText = "Rs. " + custDue.toLocaleString();
@@ -974,7 +974,6 @@
 
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      if (net === 0) net = 50;
       custHtml += `
         <tr>
           <td>${c}</td>
@@ -990,7 +989,6 @@
 
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
-      if (net === 0) net = 50;
       suppHtml += `
         <tr>
           <td>${s}</td>
@@ -1039,12 +1037,10 @@
     let custHtml = "", suppHtml = "";
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      if (net === 0) net = 50;
       custHtml += `<tr><td>${c}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
     }
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
-      if (net === 0) net = 50;
       suppHtml += `<tr><td>${s}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
     }
 
@@ -1074,8 +1070,8 @@
       let pObj = userParties.find(p => p.name.toLowerCase().includes(query) && (role === "ALL" || p.role === role));
       if (pObj) {
         document.getElementById("selectedPartyName").innerText = pObj.name;
-        tbody.innerHTML = `<tr><td>-</td><td>OPENING</td><td><span class="badge bg-secondary">OPENING-BAL</span></td><td class="fw-bold">Rs. 50</td><td><span class="text-muted small">No Pic</span></td><td>-</td></tr>`;
-        document.getElementById("selectedPartyBalance").innerText = "Rs. 50";
+        tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found for this party.</td></tr>`;
+        document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
         return;
       }
 
@@ -1105,7 +1101,7 @@
     });
 
     tbody.innerHTML = rows;
-    document.getElementById("selectedPartyBalance").innerText = "Rs. " + (netBalance !== 0 ? netBalance : 50).toLocaleString();
+    document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
   }
 
   function viewBillPic(id) {
@@ -1148,7 +1144,6 @@
     });
   }
 
-  // STANDARD PDF GENERATOR FOR LEDGER
   function generatePartyLedgerPDF() {
     let partyName = document.getElementById("selectedPartyName").innerText;
     if (partyName === "Select a Party") {
@@ -1179,7 +1174,7 @@
     });
 
     if (filtered.length === 0) {
-      doc.text(`- | OPENING-BAL | OPENING | Rs. 50 | Opening Balance`, 14, y);
+      doc.text(`No transactions found for this party.`, 14, y);
     } else {
       filtered.forEach(t => {
         doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} | ${t.notes || '-'}`, 14, y);
@@ -1190,7 +1185,7 @@
     doc.save(`${partyName}_Ledger_Report.pdf`);
   }
 
-  // 100% BULLETPROOF STANDARD TEXT PDF GENERATOR (NO AUTO-TABLE DEPENDENCY)
+  // PURE DYNAMIC DUES PDF GENERATOR (NO HARDCODED FALLBACKS)
   function downloadAllDuesPDF(type) {
     if (typeof window.jspdf === 'undefined') {
       alert("jsPDF library load ho rahi hai, 2 second baad try karein!");
@@ -1208,12 +1203,14 @@
 
     let duesMap = {};
     
+    // Only fetch from actual saved parties list
     if (typeof userParties !== 'undefined') {
       userParties.filter(p => p.role === type).forEach(p => {
-        duesMap[p.name] = { total: 50, paid: 0 };
+        duesMap[p.name] = { total: 0, paid: 0 };
       });
     }
 
+    // Calculate actual transaction balances
     if (typeof userTransactions !== 'undefined') {
       userTransactions.forEach(t => {
         if (t.role === type) {
@@ -1234,20 +1231,15 @@
     
     for (let name in duesMap) {
       let net = duesMap[name].total - duesMap[name].paid;
-      if (net <= 0) net = 50;
-      grandTotal += net;
-      rows.push({ name: name, net: net });
+      if (net !== 0) {
+        grandTotal += net;
+        rows.push({ name: name, net: net });
+      }
     }
 
     if (rows.length === 0) {
-      if (type === 'Customer') {
-        rows.push({ name: 'Motias', net: 50 });
-        rows.push({ name: 'Khaleel Farroqui Sahab', net: 50 });
-        grandTotal = 100;
-      } else {
-        rows.push({ name: 'Supplier 1', net: 50 });
-        grandTotal = 50;
-      }
+      alert(`Koi ${type} Due data maujood nahi hai!`);
+      return;
     }
 
     let y = 46;
