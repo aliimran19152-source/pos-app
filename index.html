@@ -512,9 +512,15 @@
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
     
+    if (users.find(u => u.phone === phone)) {
+      alert("Yeh phone number pehle se registered hai! Login karein.");
+      return;
+    }
+
     let newUser = { phone, pass, bizName, logo: "https://via.placeholder.com/40" };
     users.push(newUser);
     localStorage.setItem("pos_users", JSON.stringify(users));
+    
     currentUser = newUser;
     localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
     showApp();
@@ -528,8 +534,8 @@
 
     let found = users.find(u => (u.phone === phoneInput || u.bizName.toLowerCase() === phoneInput.toLowerCase()) && u.pass === passInput);
     
-    if (found || phoneInput.length > 0) {
-      currentUser = found || { phone: phoneInput, pass: passInput, bizName: phoneInput || "My Shop", logo: "https://via.placeholder.com/40" };
+    if (found) {
+      currentUser = found;
       localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
@@ -542,7 +548,7 @@
 
       showApp();
     } else {
-      alert("Invalid Credentials!");
+      alert("Invalid Credentials! Pehle account register karein.");
     }
   }
 
@@ -554,7 +560,6 @@
     document.getElementById("sidebarBizName").innerText = name;
     document.getElementById("mobileBizName").innerText = name;
     document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
-    
     document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + name;
 
     loadData();
@@ -624,7 +629,7 @@
     let phone = document.getElementById("partyPhoneInput").value.trim();
 
     userParties.push({ id: Date.now(), role, name, phone });
-    let partyKey = "pos_parties_" + (currentUser.phone || "default");
+    let partyKey = "pos_parties_" + currentUser.phone;
     localStorage.setItem(partyKey, JSON.stringify(userParties));
 
     bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
@@ -634,8 +639,8 @@
   }
 
   function loadData() {
-    let txKey = "pos_tx_" + (currentUser.phone || "default");
-    let partyKey = "pos_parties_" + (currentUser.phone || "default");
+    let txKey = "pos_tx_" + currentUser.phone;
+    let partyKey = "pos_parties_" + currentUser.phone;
     userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
     userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
   }
@@ -662,12 +667,12 @@
       }
     });
 
-    let txKey = "pos_tx_" + (currentUser.phone || "default");
+    let txKey = "pos_tx_" + currentUser.phone;
     localStorage.setItem(txKey, JSON.stringify(userTransactions));
 
     if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
       userParties.push({ id: Date.now(), role, name, phone: '-' });
-      let partyKey = "pos_parties_" + (currentUser.phone || "default");
+      let partyKey = "pos_parties_" + currentUser.phone;
       localStorage.setItem(partyKey, JSON.stringify(userParties));
     }
 
@@ -851,7 +856,7 @@
 
   function deleteTx(id) {
     userTransactions = userTransactions.filter(t => t.id !== id);
-    let txKey = "pos_tx_" + (currentUser.phone || "default");
+    let txKey = "pos_tx_" + currentUser.phone;
     localStorage.setItem(txKey, JSON.stringify(userTransactions));
     refreshDashboard();
     renderPartiesTables();
@@ -887,7 +892,7 @@
   function downloadAllDuesPDF(type) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.text(type + " Dues Report - " + (currentUser.bizName || "My Shop"), 14, 15);
+    doc.text(type + " Dues Report - " + currentUser.bizName, 14, 15);
     doc.save(type + "_Dues_Report.pdf");
   }
 
