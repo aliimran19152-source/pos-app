@@ -105,20 +105,6 @@
     </div>
   </div>
 
-  <!-- PRICING TIERS REFERENCE CARD -->
-  <div class="card card-stat p-3 bg-white mb-4">
-    <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-tags me-2"></i>Subscription Pricing Guide</h6>
-    <div class="row g-2 text-center">
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>7 Days</strong><div class="text-success small fw-bold">Trial</div></div></div>
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>1 Month</strong><div class="text-primary small fw-bold">$30</div></div></div>
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>3 Months</strong><div class="text-primary small fw-bold">$70</div></div></div>
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>6 Months</strong><div class="text-primary small fw-bold">$120</div></div></div>
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>1 Year</strong><div class="text-primary small fw-bold">$200</div></div></div>
-      <div class="col-4 col-md-2"><div class="pricing-card p-2"><strong>10 Years</strong><div class="text-danger small fw-bold">Lifetime</div></div></div>
-    </div>
-  </div>
-
-  <!-- REGISTERED USERS MANAGEMENT TABLE -->
   <div class="card card-stat p-3 bg-white mb-4">
     <h5 class="fw-bold mb-3">User Access & Subscription Approvals</h5>
     <div class="table-responsive">
@@ -140,7 +126,6 @@
     </div>
   </div>
 
-  <!-- ADMIN PASSWORD UPDATE SECTION -->
   <div class="card card-stat p-3 bg-white" style="max-width:400px;">
     <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
     <div class="input-group input-group-sm mb-2">
@@ -296,12 +281,31 @@
           </div>
         </div>
 
+        <!-- REPORTS, EXPORTS & BACKUP / RESTORE TAB -->
         <div class="tab-pane fade" id="tabReports">
-          <h4 class="fw-bold mb-3">Reports & Export</h4>
-          <div class="row g-2">
-            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-excel text-success fa-2x mb-2"></i><button onclick="exportToExcel()" class="btn btn-sm btn-success fw-bold w-100">Excel Export</button></div></div>
-            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Customer Dues PDF</button></div></div>
-            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-warning fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-sm btn-warning fw-bold w-100 text-dark">Supplier Dues PDF</button></div></div>
+          <h4 class="fw-bold mb-3">Reports & Data Backup</h4>
+          <div class="row g-3">
+            <div class="col-12 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-excel text-success fa-2x mb-2"></i><button onclick="exportToExcel()" class="btn btn-sm btn-success fw-bold w-100">Excel Export</button></div></div>
+            <div class="col-12 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Customer Dues PDF</button></div></div>
+            <div class="col-12 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-warning fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-sm btn-warning fw-bold w-100 text-dark">Supplier Dues PDF</button></div></div>
+            
+            <div class="col-12 col-md-6">
+              <div class="card card-stat p-3 bg-white text-center border border-primary">
+                <i class="fa-solid fa-cloud-arrow-down text-primary fa-2x mb-2"></i>
+                <h6 class="fw-bold">Download Complete Backup</h6>
+                <p class="text-muted small">Apne saare customers, suppliers aur transactions ka backup JSON file mein download karein.</p>
+                <button onclick="downloadSystemBackup()" class="btn btn-sm btn-primary fw-bold w-100"><i class="fa-solid fa-download me-1"></i> Download Backup File</button>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="card card-stat p-3 bg-white text-center border border-success">
+                <i class="fa-solid fa-cloud-arrow-up text-success fa-2x mb-2"></i>
+                <h6 class="fw-bold">Restore Backup File</h6>
+                <p class="text-muted small">Pehle se saved backup JSON file select karke poora data wapis restore karein.</p>
+                <input type="file" id="restoreFile" class="form-control form-control-sm mb-2" accept=".json" onchange="restoreSystemBackup(event)">
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -346,7 +350,6 @@
 
           <div id="multiRowsContainer"></div>
 
-          <!-- SPLIT PAYMENTS CONTAINER -->
           <div id="splitPaymentSection" class="border rounded p-2 bg-light mb-2 d-none">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label class="form-label small fw-bold text-primary mb-0"><i class="fa-solid fa-wallet me-1"></i> Split Payment Methods (Multi-Mode)</label>
@@ -693,6 +696,54 @@
     document.getElementById("mainApp").classList.add("d-none");
     document.getElementById("superAdminApp").classList.add("d-none");
     document.getElementById("authScreen").classList.remove("d-none");
+  }
+
+  // DOWNLOAD BACKUP JSON FILE
+  function downloadSystemBackup() {
+    let backupData = {
+      bizName: currentUser.bizName,
+      phone: currentUser.phone,
+      parties: userParties,
+      transactions: userTransactions,
+      backupDate: new Date().toISOString()
+    };
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    let dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `${currentUser.bizName.replace(/\s+/g, '_')}_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  }
+
+  // RESTORE SYSTEM BACKUP FROM JSON FILE
+  async function restoreSystemBackup(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        let imported = JSON.parse(e.target.result);
+        if (!imported.parties || !imported.transactions) {
+          alert("Invalid Backup File format!");
+          return;
+        }
+
+        if (confirm(`Kya aap "${imported.bizName}" ka backup restore karna chahte hain? Isse current data replace ho jayega.`)) {
+          userParties = imported.parties;
+          userTransactions = imported.transactions;
+          await saveToServer();
+          refreshDashboard();
+          renderPartiesTables();
+          alert("Backup Successfully Restore Ho Gaya Hai!");
+        }
+      } catch (err) {
+        alert("Backup file read karne mein error aayi!");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
   function previewBillImage(event, targetImgId) {
@@ -1048,7 +1099,6 @@
         if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
       }
 
-      // ONLY count actual cash/payment methods, exclude credit/dues
       if (t.method && t.method !== "Credit" && methodShare[t.method] !== undefined) {
         methodShare[t.method] += t.amount;
       }
@@ -1336,7 +1386,7 @@
     if (typeof userTransactions !== 'undefined') {
       userTransactions.forEach(t => {
         if (t.role === type) {
-          if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 1 };
+          if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 0 };
           if (type === "Customer") {
             if (t.type === "SALE_CREDIT") duesMap[t.name].total += Number(t.amount) || 0;
             else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") duesMap[t.name].paid += Number(t.amount) || 0;
