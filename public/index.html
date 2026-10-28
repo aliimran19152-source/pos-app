@@ -314,7 +314,7 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white p-2 px-3">
-        <h6 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Single Bill Multi-Transaction Entry</h6>
+        <h6 class="modal-title fw-bold"><i class="fa-solid fa-receipt me-2"></i> Single Bill Multi-Transaction & Split Payment Entry</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -329,8 +329,9 @@
             </div>
             <div class="col-6 col-md-4">
               <label class="form-label small fw-bold">Name</label>
-              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" list="partySuggestions" required autocomplete="off">
+              <input type="text" id="entryName" class="form-control form-control-sm" placeholder="Name" list="partySuggestions" required autocomplete="off" oninput="checkPartyLiveBalance()">
               <datalist id="partySuggestions"></datalist>
+              <small id="liveBalanceWarning" class="fw-bold d-block mt-1" style="font-size: 11px;"></small>
             </div>
             <div class="col-6 col-md-4">
               <label class="form-label small fw-bold">Bill No.</label>
@@ -345,20 +346,19 @@
 
           <div id="multiRowsContainer"></div>
 
+          <!-- SPLIT PAYMENTS CONTAINER -->
+          <div id="splitPaymentSection" class="border rounded p-2 bg-light mb-2 d-none">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label small fw-bold text-primary mb-0"><i class="fa-solid fa-wallet me-1"></i> Split Payment Methods (Multi-Mode)</label>
+              <button type="button" class="btn btn-sm btn-outline-primary py-0" style="font-size:11px;" onclick="addSplitRow()"><i class="fa-solid fa-plus me-1"></i> Add Method</button>
+            </div>
+            <div id="splitRowsContainer"></div>
+          </div>
+
           <div class="row g-2 mb-2 mt-2">
-            <div class="col-6">
+            <div class="col-12">
               <label class="form-label small fw-bold">Date</label>
               <input type="date" id="entryDate" class="form-control form-control-sm" required>
-            </div>
-            <div class="col-6" id="paymentMethodWrapper">
-              <label class="form-label small fw-bold">Payment Method</label>
-              <select id="entryMethod" class="form-select form-select-sm">
-                <option value="Cash">Cash</option>
-                <option value="Online / Bank">Online / Bank</option>
-                <option value="Cheque">Cheque</option>
-                <option value="JazzCash">JazzCash</option>
-                <option value="EasyPaisa">EasyPaisa</option>
-              </select>
             </div>
           </div>
 
@@ -401,7 +401,7 @@
           </div>
           
           <div class="p-2 border rounded bg-light mb-3">
-            <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-book-open me-1"></i> Purana Khaya / Opening Balance</label>
+            <label class="form-label small fw-bold text-primary"><i class="fa-solid fa-book-open me-1"></i> Purana Khata / Opening Balance</label>
             <div class="row g-2 mb-2">
               <div class="col-7">
                 <input type="number" id="partyOpeningBal" class="form-control form-control-sm" placeholder="Amount (Rs. 0)">
@@ -415,7 +415,7 @@
             </div>
             
             <div>
-              <label class="form-label small fw-bold text-secondary mb-1"><i class="fa-solid fa-camera me-1"></i> Purana Khata Proof / Register Pic (Optional)</label>
+              <label class="form-label small fw-bold text-secondary mb-1"><i class="fa-solid fa-camera me-1"></i> Register Pic (Optional)</label>
               <input type="file" id="partyOpeningImg" class="form-control form-control-sm" accept="image/*" onchange="previewBillImage(event, 'openingImgPreview')">
               <img id="openingImgPreview" class="img-preview d-none" alt="Opening Balance Preview">
             </div>
@@ -717,9 +717,11 @@
     currentBillBase64 = "";
     document.getElementById("billImgPreview").classList.add("d-none");
     document.getElementById("entryBillImg").value = "";
+    document.getElementById("liveBalanceWarning").innerText = "";
     new bootstrap.Modal(document.getElementById('entryModal')).show();
   }
 
+  // SMART FUZZY MATCH & SUGGESTIONS
   function updatePartySuggestions() {
     let role = document.getElementById("entryRole").value;
     let datalist = document.getElementById("partySuggestions");
@@ -736,9 +738,55 @@
     });
   }
 
+  // CHECK LIVE RED BALANCE ON INPUT
+  function checkPartyLiveBalance() {
+    let role = document.getElementById("entryRole").value;
+    let typedName = document.getElementById("entryName").value.trim().toLowerCase();
+    let warningEl = document.getElementById("liveBalanceWarning");
+
+    if (!typedName) {
+      warningEl.innerText = "";
+      return;
+    }
+
+    // Fuzzy Match: Find closest matching party name
+    let matchedPartyName = null;
+    let allNames = new Set();
+    userParties.filter(p => p.role === role).forEach(p => allNames.add(p.name));
+    userTransactions.filter(t => t.role === role).forEach(t => allNames.add(t.name));
+
+    for (let name of allNames) {
+      let cleanStored = name.toLowerCase().replace(/\s+/g, '');
+      let cleanTyped = typedName.replace(/\s+/g, '');
+      if (cleanStored === cleanTyped || cleanStored.includes(cleanTyped) || cleanTyped.includes(cleanStored)) {
+        matchedPartyName = name;
+        break;
+      }
+    }
+
+    if (matchedPartyName) {
+      let total = 0, paid = 0;
+      userTransactions.filter(t => t.role === role && t.name.toLowerCase() === matchedPartyName.toLowerCase()).forEach(t => {
+        if (role === "Customer") {
+          if (t.type === "SALE_CREDIT") total += t.amount;
+          else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") paid += t.amount;
+        } else {
+          if (t.type === "PURCHASE_CREDIT") total += t.amount;
+          else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") paid += t.amount;
+        }
+      });
+      let net = total - paid;
+      warningEl.innerHTML = `<span class="text-danger">⚠️ Existing Balance (${matchedPartyName}): Rs. ${net.toLocaleString()}</span>`;
+    } else {
+      warningEl.innerHTML = `<span class="text-success">✨ New Party Name</span>`;
+    }
+  }
+
   function resetMultiRows() {
     document.getElementById("multiRowsContainer").innerHTML = "";
+    document.getElementById("splitRowsContainer").innerHTML = "";
     addMultiRow();
+    checkPaymentVisibility();
   }
 
   function addMultiRow() {
@@ -786,12 +834,40 @@
       }
     });
 
-    let pmWrapper = document.getElementById("paymentMethodWrapper");
+    let splitSection = document.getElementById("splitPaymentSection");
     if (hasCashOrPayment) {
-      pmWrapper.classList.remove("d-none");
+      splitSection.classList.remove("d-none");
+      if (document.querySelectorAll(".split-row").length === 0) {
+        addSplitRow();
+      }
     } else {
-      pmWrapper.classList.add("d-none");
+      splitSection.classList.add("d-none");
+      document.getElementById("splitRowsContainer").innerHTML = "";
     }
+  }
+
+  function addSplitRow() {
+    let container = document.getElementById("splitRowsContainer");
+    let rowDiv = document.createElement("div");
+    rowDiv.className = "row g-2 align-items-center mb-1 split-row";
+    rowDiv.innerHTML = `
+      <div class="col-6">
+        <select class="form-select form-select-sm split-method">
+          <option value="Cash">Cash</option>
+          <option value="Online / Bank">Online / Bank</option>
+          <option value="Cheque">Cheque</option>
+          <option value="JazzCash">JazzCash</option>
+          <option value="EasyPaisa">EasyPaisa</option>
+        </select>
+      </div>
+      <div class="col-4">
+        <input type="number" class="form-control form-control-sm split-amount fw-bold text-primary" placeholder="Amount" required>
+      </div>
+      <div class="col-2 text-end">
+        <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="this.closest('.split-row').remove()"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    `;
+    container.appendChild(rowDiv);
   }
 
   function openAddPartyModal(role) {
@@ -832,7 +908,7 @@
           amount: openingBal,
           method: "Cash",
           date: new Date().toISOString().split('T')[0],
-          notes: "Purana Bakaya / Opening Balance Entry",
+          notes: "Purana Khata / Opening Balance Entry",
           img: currentOpeningBase64
         });
       }
@@ -857,29 +933,81 @@
     }
   }
 
+  // SMART SAVE TRANSACTION (WITH FUZZY MATCH & SPLIT PAYMENTS)
   async function saveTransaction(e) {
     e.preventDefault();
     let role = document.getElementById("entryRole").value;
     let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
     
-    let existingParty = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
-    let name = existingParty ? existingParty.name : rawName;
+    // Fuzzy match check to prevent duplicate party names due to spelling variations
+    let matchedParty = userParties.find(p => p.role === role && p.name.toLowerCase().replace(/\s+/g, '') === rawName.toLowerCase().replace(/\s+/g, ''));
+    let name = matchedParty ? matchedParty.name : rawName;
 
     let billNo = document.getElementById("entryBillNo").value.trim();
-    let method = document.getElementById("entryMethod").value;
     let date = document.getElementById("entryDate").value;
     let notes = document.getElementById("entryNotes").value.trim();
 
     let rowTypes = document.querySelectorAll(".entry-row-type");
     let rowAmounts = document.querySelectorAll(".entry-row-amount");
 
+    // Process main line items/transactions
     rowTypes.forEach((typeEl, index) => {
       let type = typeEl.value;
       let amount = parseFloat(rowAmounts[index].value) || 0;
 
       if (amount > 0) {
-        let tx = { id: Date.now() + Math.random(), role, name, billNo, type, amount, method, date, notes, img: currentBillBase64 };
-        userTransactions.push(tx);
+        let isCashOrPay = (type === "SALE_CASH" || type === "PURCHASE_CASH" || type === "PAYMENT_REC" || type === "PAYMENT_PAID");
+        
+        if (isCashOrPay) {
+          // Handle Split Payments if multiple methods are provided
+          let splitRows = document.querySelectorAll(".split-row");
+          if (splitRows.length > 0) {
+            splitRows.forEach(sr => {
+              let sMethod = sr.querySelector(".split-method").value;
+              let sAmount = parseFloat(sr.querySelector(".split-amount").value) || 0;
+              if (sAmount > 0) {
+                userTransactions.push({
+                  id: Date.now() + Math.random(),
+                  role,
+                  name,
+                  billNo,
+                  type,
+                  amount: sAmount,
+                  method: sMethod,
+                  date,
+                  notes: notes + ` (Split: ${sMethod})`,
+                  img: currentBillBase64
+                });
+              }
+            });
+          } else {
+            userTransactions.push({
+              id: Date.now() + Math.random(),
+              role,
+              name,
+              billNo,
+              type,
+              amount,
+              method: "Cash",
+              date,
+              notes,
+              img: currentBillBase64
+            });
+          }
+        } else {
+          userTransactions.push({
+            id: Date.now() + Math.random(),
+            role,
+            name,
+            billNo,
+            type,
+            amount,
+            method: "Credit",
+            date,
+            notes,
+            img: currentBillBase64
+          });
+        }
       }
     });
 
@@ -924,7 +1052,7 @@
         if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
       }
 
-      if ((t.type === "SALE_CASH" || t.type === "PURCHASE_CASH" || t.type === "PAYMENT_REC" || t.type === "PAYMENT_PAID") && methodShare[t.method] !== undefined) {
+      if (methodShare[t.method] !== undefined) {
         methodShare[t.method] += t.amount;
       }
     });
@@ -1093,7 +1221,7 @@
           <td>${t.date}</td>
           <td>${t.billNo}</td>
           <td><span class="badge bg-secondary">${t.type}</span></td>
-          <td class="fw-bold">Rs. ${t.amount.toLocaleString()}</td>
+          <td class="fw-bold">Rs. ${t.amount.toLocaleString()} (${t.method || 'Cash'})</td>
           <td>${picBtn}</td>
           <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
@@ -1161,7 +1289,7 @@
 
     let y = 40;
     doc.setFontSize(11);
-    doc.text("Date | Bill # | Type | Amount | Notes", 14, y);
+    doc.text("Date | Bill # | Type | Amount (Method) | Notes", 14, y);
     y += 8;
 
     let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
@@ -1177,7 +1305,7 @@
       doc.text(`No transactions found for this party.`, 14, y);
     } else {
       filtered.forEach(t => {
-        doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} | ${t.notes || '-'}`, 14, y);
+        doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} (${t.method || 'Cash'}) | ${t.notes || '-'}`, 14, y);
         y += 8;
       });
     }
@@ -1185,7 +1313,6 @@
     doc.save(`${partyName}_Ledger_Report.pdf`);
   }
 
-  // PURE DYNAMIC DUES PDF GENERATOR (NO HARDCODED FALLBACKS)
   function downloadAllDuesPDF(type) {
     if (typeof window.jspdf === 'undefined') {
       alert("jsPDF library load ho rahi hai, 2 second baad try karein!");
@@ -1203,14 +1330,12 @@
 
     let duesMap = {};
     
-    // Only fetch from actual saved parties list
     if (typeof userParties !== 'undefined') {
       userParties.filter(p => p.role === type).forEach(p => {
         duesMap[p.name] = { total: 0, paid: 0 };
       });
     }
 
-    // Calculate actual transaction balances
     if (typeof userTransactions !== 'undefined') {
       userTransactions.forEach(t => {
         if (t.role === type) {
