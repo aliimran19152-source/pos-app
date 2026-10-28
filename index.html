@@ -102,7 +102,7 @@
 <div id="mainApp" class="container-fluid d-none">
   <div class="row">
 
-    <!-- Sidebar -->
+    <!-- Sidebar Menu -->
     <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block">
       <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
         <img id="sidebarLogo" src="https://via.placeholder.com/45" class="biz-logo-img me-2" alt="Logo">
@@ -114,9 +114,11 @@
 
       <div class="nav flex-column nav-pills" role="tablist">
         <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tabDashboard"><i class="fa-solid fa-chart-line me-2"></i> POS Dashboard</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabCustomers"><i class="fa-solid fa-users me-2"></i> Customers</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabSuppliers"><i class="fa-solid fa-truck-field me-2"></i> Suppliers</button>
         <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabLedger"><i class="fa-solid fa-book-bookmark me-2"></i> Ledger Search</button>
         <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabDues"><i class="fa-solid fa-coins me-2"></i> Combined Dues</button>
-        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabReports"><i class="fa-solid fa-file-invoice me-2"></i> Bulk PDF Reports</button>
+        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabReports"><i class="fa-solid fa-file-invoice me-2"></i> Reports & Export</button>
         <button class="nav-link text-start text-danger mt-4" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</button>
       </div>
     </div>
@@ -130,7 +132,10 @@
         <div class="tab-pane fade show active" id="tabDashboard">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold" id="dashWelcomeTitle">Dashboard</h3>
-            <button class="btn btn-primary fw-bold" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Quick Entry</button>
+            <div>
+              <button class="btn btn-primary fw-bold me-2" onclick="openEntryModal()"><i class="fa-solid fa-plus-circle me-1"></i> Quick Entry</button>
+              <button class="btn btn-outline-danger fw-bold" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</button>
+            </div>
           </div>
 
           <!-- Key Metrics -->
@@ -178,6 +183,60 @@
                 <h6 class="fw-bold mb-3">Payment Methods Share</h6>
                 <canvas id="paymentMethodChart" height="200"></canvas>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOMERS TAB -->
+        <div class="tab-pane fade" id="tabCustomers">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold">Customers Directory & Dues</h3>
+            <button class="btn btn-success fw-bold" onclick="openAddPartyModal('Customer')"><i class="fa-solid fa-user-plus me-1"></i> Add New Customer</button>
+          </div>
+          <div class="card card-stat p-3 bg-white">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered text-center align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Phone Number</th>
+                    <th>Total Sales</th>
+                    <th>Total Payments/Returns</th>
+                    <th>Net Balance (Due)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="customersTableBody">
+                  <tr><td colspan="6" class="text-muted">No customers added yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUPPLIERS TAB -->
+        <div class="tab-pane fade" id="tabSuppliers">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold">Suppliers Directory & Dues</h3>
+            <button class="btn btn-warning fw-bold text-dark" onclick="openAddPartyModal('Supplier')"><i class="fa-solid fa-truck me-1"></i> Add New Supplier</button>
+          </div>
+          <div class="card card-stat p-3 bg-white">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered text-center align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Supplier Name</th>
+                    <th>Phone Number</th>
+                    <th>Total Purchases</th>
+                    <th>Total Payments/Returns</th>
+                    <th>Net Payable</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="suppliersTableBody">
+                  <tr><td colspan="6" class="text-muted">No suppliers added yet.</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -398,6 +457,32 @@
   </div>
 </div>
 
+<!-- ADD PARTY MODAL -->
+<div class="modal fade" id="addPartyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold" id="addPartyModalTitle">Add New Party</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addPartyForm" onsubmit="saveParty(event)">
+          <input type="hidden" id="partyRoleInput">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Name</label>
+            <input type="text" id="partyNameInput" class="form-control" placeholder="Enter Full Name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Phone Number</label>
+            <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
+          </div>
+          <button type="submit" class="btn btn-success w-100 fw-bold py-2">Save Party</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- IMAGE PREVIEW MODAL -->
 <div class="modal fade" id="imageModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -414,6 +499,7 @@
   let users = JSON.parse(localStorage.getItem("pos_users")) || [];
   let currentUser = JSON.parse(localStorage.getItem("pos_current_user")) || null;
   let userTransactions = [];
+  let userParties = [];
   let mainChart = null, methodChart = null;
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -520,8 +606,9 @@
     document.getElementById("sidebarLogo").src = currentUser.logo || "https://via.placeholder.com/45";
     document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + (currentUser.bizName || "My Shop");
 
-    loadTransactions();
+    loadData();
     refreshDashboard();
+    renderPartiesTables();
   }
 
   function handleLogout() {
@@ -533,6 +620,28 @@
 
   function openEntryModal() {
     new bootstrap.Modal(document.getElementById('entryModal')).show();
+  }
+
+  function openAddPartyModal(role) {
+    document.getElementById("partyRoleInput").value = role;
+    document.getElementById("addPartyModalTitle").innerText = "Add New " + role;
+    new bootstrap.Modal(document.getElementById('addPartyModal')).show();
+  }
+
+  function saveParty(e) {
+    e.preventDefault();
+    let role = document.getElementById("partyRoleInput").value;
+    let name = document.getElementById("partyNameInput").value.trim();
+    let phone = document.getElementById("partyPhoneInput").value.trim();
+
+    userParties.push({ id: Date.now(), role, name, phone });
+    let partyKey = "pos_parties_" + (currentUser.phone || "default");
+    localStorage.setItem(partyKey, JSON.stringify(userParties));
+
+    bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
+    document.getElementById("addPartyForm").reset();
+
+    renderPartiesTables();
   }
 
   function toggleEntryTypes() {
@@ -553,9 +662,11 @@
     }
   }
 
-  function loadTransactions() {
-    let key = "pos_tx_" + (currentUser.phone || "default");
-    userTransactions = JSON.parse(localStorage.getItem(key)) || [];
+  function loadData() {
+    let txKey = "pos_tx_" + (currentUser.phone || "default");
+    let partyKey = "pos_parties_" + (currentUser.phone || "default");
+    userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
+    userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
   }
 
   function saveTransaction(e) {
@@ -573,14 +684,21 @@
     let addTx = (imgData) => {
       let tx = { id: Date.now(), role, name, billNo, type, amount, method, date, notes, image: imgData || "" };
       userTransactions.push(tx);
-      let key = "pos_tx_" + (currentUser.phone || "default");
-      localStorage.setItem(key, JSON.stringify(userTransactions));
-      
+      let txKey = "pos_tx_" + (currentUser.phone || "default");
+      localStorage.setItem(txKey, JSON.stringify(userTransactions));
+
+      if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
+        userParties.push({ id: Date.now(), role, name, phone: '-' });
+        let partyKey = "pos_parties_" + (currentUser.phone || "default");
+        localStorage.setItem(partyKey, JSON.stringify(userParties));
+      }
+
       bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
       document.getElementById("fastForm").reset();
       document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
       
       refreshDashboard();
+      renderPartiesTables();
       searchPartyLedger();
     };
 
@@ -625,6 +743,73 @@
     renderCharts(totalSales, custDue, suppDue, methodShare);
   }
 
+  function renderPartiesTables() {
+    let custBody = document.getElementById("customersTableBody");
+    let suppBody = document.getElementById("suppliersTableBody");
+
+    let custMap = {}, suppMap = {};
+
+    userParties.forEach(p => {
+      if (p.role === "Customer") custMap[p.name] = { phone: p.phone, total: 0, paid: 0 };
+      if (p.role === "Supplier") suppMap[p.name] = { phone: p.phone, total: 0, paid: 0 };
+    });
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (!custMap[t.name]) custMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (t.type === "SALE") custMap[t.name].total += t.amount;
+        else custMap[t.name].paid += t.amount;
+      } else {
+        if (!suppMap[t.name]) suppMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (t.type === "PURCHASE") suppMap[t.name].total += t.amount;
+        else suppMap[t.name].paid += t.amount;
+      }
+    });
+
+    let custHtml = "", suppHtml = "";
+
+    for (let c in custMap) {
+      let net = custMap[c].total - custMap[c].paid;
+      custHtml += `
+        <tr>
+          <td>${c}</td>
+          <td>${custMap[c].phone}</td>
+          <td>Rs. ${custMap[c].total.toLocaleString()}</td>
+          <td>Rs. ${custMap[c].paid.toLocaleString()}</td>
+          <td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td>
+          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${c}', 'Customer')">View Ledger</button></td>
+        </tr>
+      `;
+    }
+
+    for (let s in suppMap) {
+      let net = suppMap[s].total - suppMap[s].paid;
+      suppHtml += `
+        <tr>
+          <td>${s}</td>
+          <td>${suppMap[s].phone}</td>
+          <td>Rs. ${suppMap[s].total.toLocaleString()}</td>
+          <td>Rs. ${suppMap[s].paid.toLocaleString()}</td>
+          <td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td>
+          <td><button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewPartyLedger('${s}', 'Supplier')">View Ledger</button></td>
+        </tr>
+      `;
+    }
+
+    custBody.innerHTML = custHtml || `<tr><td colspan="6" class="text-muted">No customers found.</td></tr>`;
+    suppBody.innerHTML = suppHtml || `<tr><td colspan="6" class="text-muted">No suppliers found.</td></tr>`;
+  }
+
+  function viewPartyLedger(name, role) {
+    document.getElementById("partySearchInput").value = name;
+    document.getElementById("partyRoleFilter").value = role;
+    
+    let ledgerTabTrigger = new bootstrap.Tab(document.querySelector('[data-bs-target="#tabLedger"]'));
+    ledgerTabTrigger.show();
+    
+    searchPartyLedger();
+  }
+
   function renderDuesLists() {
     let custMap = {}, suppMap = {};
 
@@ -643,11 +828,11 @@
     let custHtml = "", suppHtml = "";
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      custHtml += `<tr><td>${c}</td><td>Rs. ${custMap[c].total}</td><td>Rs. ${custMap[c].paid}</td><td class="fw-bold text-danger">Rs. ${net}</td></tr>`;
+      custHtml += `<tr><td>${c}</td><td>Rs. ${custMap[c].total.toLocaleString()}</td><td>Rs. ${custMap[c].paid.toLocaleString()}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
     }
     for (let s in suppMap) {
       let net = suppMap[s].total - suppMap[s].paid;
-      suppHtml += `<tr><td>${s}</td><td>Rs. ${suppMap[s].total}</td><td>Rs. ${suppMap[s].paid}</td><td class="fw-bold text-warning">Rs. ${net}</td></tr>`;
+      suppHtml += `<tr><td>${s}</td><td>Rs. ${suppMap[s].total.toLocaleString()}</td><td>Rs. ${suppMap[s].paid.toLocaleString()}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
     }
 
     document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="4" class="text-muted">No Customer Data</td></tr>`;
@@ -707,9 +892,10 @@
 
   function deleteTx(id) {
     userTransactions = userTransactions.filter(t => t.id !== id);
-    let key = "pos_tx_" + (currentUser.phone || "default");
-    localStorage.setItem(key, JSON.stringify(userTransactions));
+    let txKey = "pos_tx_" + (currentUser.phone || "default");
+    localStorage.setItem(txKey, JSON.stringify(userTransactions));
     refreshDashboard();
+    renderPartiesTables();
     searchPartyLedger();
   }
 
