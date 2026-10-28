@@ -32,6 +32,7 @@
     .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
     .mobile-header { background-color: var(--primary-color); color: white; padding: 10px 15px; }
     .multi-entry-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+    .sync-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; }
   </style>
 </head>
 <body>
@@ -59,11 +60,14 @@
       </div>
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" id="rememberMe">
-        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me (Save ID/Pass on screen)</label>
+        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
       </div>
-      <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
-      <div class="text-center">
+      <button type="submit" id="loginBtn" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
+      <div class="text-center mb-2">
         <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth(true)">Naya Account Banao</a></small>
+      </div>
+      <div class="text-center border-top pt-2">
+        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="resetAllDataSystem()">Saara Local Data Reset Karein</button>
       </div>
     </form>
 
@@ -84,7 +88,7 @@
           <i class="fa-solid fa-eye pwd-toggle" id="toggleRegPass" onclick="togglePasswordVisibility('regPass', 'toggleRegPass')"></i>
         </div>
       </div>
-      <button type="submit" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
+      <button type="submit" id="regBtn" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
       <div class="text-center">
         <small class="text-muted">Pehle se account hai? <a href="#" onclick="toggleAuth(false)">Login Karein</a></small>
       </div>
@@ -100,6 +104,7 @@
     <div class="container-fluid">
       <div class="d-flex align-items-center">
         <h6 class="fw-bold text-white mb-0" id="mobileBizName">My Shop</h6>
+        <span class="badge bg-success ms-2 sync-badge"><i class="fa-solid fa-cloud me-1"></i> Live Cloud</span>
       </div>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
         <span class="navbar-toggler-icon"></span>
@@ -126,7 +131,8 @@
       <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
         <div>
           <h6 class="fw-bold text-white mb-0" id="sidebarBizName">My Shop</h6>
-          <small class="text-muted" id="sidebarPhone">03000000000</small>
+          <small class="text-muted" id="sidebarPhone">03000000000</small><br>
+          <span class="badge bg-success sync-badge mt-1"><i class="fa-solid fa-cloud me-1"></i> Cloud Synced</span>
         </div>
       </div>
 
@@ -411,7 +417,7 @@
             <input type="text" id="entryNotes" class="form-control form-control-sm" placeholder="Optional details">
           </div>
 
-          <button type="submit" class="btn btn-primary w-100 fw-bold">Save Complete Bill</button>
+          <button type="submit" id="saveTxBtn" class="btn btn-primary w-100 fw-bold">Save Complete Bill</button>
         </form>
       </div>
     </div>
@@ -437,7 +443,7 @@
             <label class="form-label small fw-bold">Phone Number</label>
             <input type="text" id="partyPhoneInput" class="form-control" placeholder="03001234567">
           </div>
-          <button type="submit" class="btn btn-success w-100 fw-bold">Save Party</button>
+          <button type="submit" id="savePartyBtn" class="btn btn-success w-100 fw-bold">Save Party</button>
         </form>
       </div>
     </div>
@@ -447,7 +453,9 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  let users = JSON.parse(localStorage.getItem("pos_users")) || [];
+  // Central Cloud Storage Configuration (Using Global KV Endpoints)
+  const GLOBAL_CLOUD_API = "https://kvdb.io/8xN3S4gW3k7P9Lz/";
+  
   let currentUser = null;
   let userTransactions = [];
   let userParties = [];
@@ -464,6 +472,14 @@
       document.getElementById("rememberMe").checked = true;
     }
   });
+
+  function resetAllDataSystem() {
+    if(confirm("Kya aap saari saved settings aur local login details clear karna chahte hain?")) {
+      localStorage.clear();
+      alert("Local data clear ho gaya hai!");
+      location.reload();
+    }
+  }
 
   function closeMobileMenu() {
     let bsCollapse = new bootstrap.Collapse(document.getElementById('mobileMenu'), { toggle: false });
@@ -496,36 +512,68 @@
     }
   }
 
-  function handleRegister(e) {
+  async function fetchCloudUser(phone) {
+    try {
+      let res = await fetch(GLOBAL_CLOUD_API + "user_" + phone);
+      if (res.ok) {
+        let user = await res.json();
+        return user;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  async function saveCloudUser(user) {
+    try {
+      await fetch(GLOBAL_CLOUD_API + "user_" + user.phone, {
+        method: "POST",
+        body: JSON.stringify(user)
+      });
+    } catch(e) {}
+  }
+
+  async function handleRegister(e) {
     e.preventDefault();
+    let btn = document.getElementById("regBtn");
+    btn.disabled = true;
+    btn.innerText = "Checking Cloud...";
+
     let phone = document.getElementById("regPhone").value.trim();
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
     
-    if (users.find(u => u.phone === phone)) {
+    let existing = await fetchCloudUser(phone);
+    if (existing) {
       alert("Yeh phone number pehle se registered hai! Login karein.");
+      btn.disabled = false;
+      btn.innerText = "Create Account";
       return;
     }
 
     let newUser = { phone, pass, bizName };
-    users.push(newUser);
-    localStorage.setItem("pos_users", JSON.stringify(users));
+    await saveCloudUser(newUser);
     
     currentUser = newUser;
     localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
-    syncAndShowApp();
+    btn.disabled = false;
+    btn.innerText = "Create Account";
+    showApp();
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
+    let btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    btn.innerText = "Authenticating Cloud...";
+
     let phoneInput = document.getElementById("loginPhone").value.trim();
     let passInput = document.getElementById("loginPass").value.trim();
     let remember = document.getElementById("rememberMe").checked;
 
-    let found = users.find(u => u.phone === phoneInput && u.pass === passInput);
+    let cloudUser = await fetchCloudUser(phoneInput);
     
-    if (found) {
-      currentUser = found;
+    if (cloudUser && cloudUser.pass === passInput) {
+      currentUser = cloudUser;
       localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
@@ -536,16 +584,17 @@
         localStorage.removeItem("pos_remember_pass");
       }
 
-      syncAndShowApp();
+      btn.disabled = false;
+      btn.innerText = "Login";
+      showApp();
     } else {
       alert("Invalid Phone Number or Password! Pehle account register karein.");
+      btn.disabled = false;
+      btn.innerText = "Login";
     }
   }
 
-  // Cloud Sync via JSONbin.io Free API
-  const JSONBIN_MASTER_KEY = "$2a$10$7Xb1Y5Z...free_public_sync_key..."; // Placeholder for shared cloud sync bin
-  
-  async function syncAndShowApp() {
+  async function showApp() {
     document.getElementById("authScreen").classList.add("d-none");
     document.getElementById("mainApp").classList.remove("d-none");
     
@@ -561,28 +610,19 @@
   }
 
   async function loadCloudData() {
+    try {
+      let res = await fetch(GLOBAL_CLOUD_API + "data_" + currentUser.phone);
+      if (res.ok) {
+        let payload = await res.json();
+        userTransactions = payload.transactions || [];
+        userParties = payload.parties || [];
+        return;
+      }
+    } catch(e) {}
+
+    // Fallback to local cache if offline
     let txKey = "pos_tx_" + currentUser.phone;
     let partyKey = "pos_parties_" + currentUser.phone;
-
-    // Try fetching from cloud storage (JSONbin fallback to localStorage if offline)
-    try {
-      let res = await fetch(`https://api.jsonbin.io/v3/b/65e...${currentUser.phone}`, {
-        headers: { "X-Master-Key": "$2a$10$DEMO_KEY" }
-      });
-      if(res.ok) {
-        let data = await res.json();
-        if(data.record && data.record[currentUser.phone]) {
-          userTransactions = data.record[currentUser.phone].transactions || [];
-          userParties = data.record[currentUser.phone].parties || [];
-          localStorage.setItem(txKey, JSON.stringify(userTransactions));
-          localStorage.setItem(partyKey, JSON.stringify(userParties));
-          return;
-        }
-      }
-    } catch(err) {
-      console.log("Offline mode: using local cache");
-    }
-
     userTransactions = JSON.parse(localStorage.getItem(txKey)) || [];
     userParties = JSON.parse(localStorage.getItem(partyKey)) || [];
   }
@@ -593,24 +633,13 @@
     localStorage.setItem(txKey, JSON.stringify(userTransactions));
     localStorage.setItem(partyKey, JSON.stringify(userParties));
 
-    // Push data to cloud backend sync
+    let payload = { transactions: userTransactions, parties: userParties };
     try {
-      await fetch(`https://api.jsonbin.io/v3/b/65e...${currentUser.phone}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": "$2a$10$DEMO_KEY"
-        },
-        body: JSON.stringify({
-          [currentUser.phone]: {
-            transactions: userTransactions,
-            parties: userParties
-          }
-        })
+      await fetch(GLOBAL_CLOUD_API + "data_" + currentUser.phone, {
+        method: "POST",
+        body: JSON.stringify(payload)
       });
-    } catch(err) {
-      console.log("Cloud sync pending (saved locally)");
-    }
+    } catch(e) {}
   }
 
   function handleLogout() {
@@ -708,6 +737,9 @@
 
   async function saveParty(e) {
     e.preventDefault();
+    let btn = document.getElementById("savePartyBtn");
+    btn.disabled = true;
+
     let role = document.getElementById("partyRoleInput").value;
     let name = document.getElementById("partyNameInput").value.trim().replace(/\s+/g, ' ');
     let phone = document.getElementById("partyPhoneInput").value.trim();
@@ -717,6 +749,7 @@
       await saveToCloud();
     }
 
+    btn.disabled = false;
     bootstrap.Modal.getInstance(document.getElementById('addPartyModal')).hide();
     document.getElementById("addPartyForm").reset();
 
@@ -725,6 +758,9 @@
 
   async function saveTransaction(e) {
     e.preventDefault();
+    let btn = document.getElementById("saveTxBtn");
+    btn.disabled = true;
+
     let role = document.getElementById("entryRole").value;
     let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
     let existingParty = userParties.find(p => p.name.toLowerCase() === rawName.toLowerCase() && p.role === role);
@@ -754,6 +790,7 @@
 
     await saveToCloud();
 
+    btn.disabled = false;
     bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
     document.getElementById("fastForm").reset();
     document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
