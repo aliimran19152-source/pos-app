@@ -1,49 +1,59 @@
 const express = require('express');
 const cors = require('cors');
-const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ limit: '15mb', extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 app.use(express.static('public'));
 
-const FIREBASE_DB_URL = "https://pos-ledger-system-default-rtdb.firebaseio.com";
-
-function fetchCloudData(path) {
-    return new Promise((resolve) => {
-        https.get(`${FIREBASE_DB_URL}/${path}.json`, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    if (res.statusCode === 200 && data !== 'null') resolve(JSON.parse(data));
-                    else resolve(null);
-                } catch(e) { resolve(null); }
-            });
-        }).on('error', () => resolve(null));
-    });
+// Local Data Store Directory
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function saveCloudData(path, payload) {
-    return new Promise((resolve) => {
-        const data = JSON.stringify(payload);
-        const url = new URL(`${FIREBASE_DB_URL}/${path}.json`);
-        const req = https.request(url, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(data)
-            }
-        }, (res) => {
-            resolve(res.statusCode === 200);
-        });
-        req.on('error', () => resolve(false));
-        req.write(data);
-        req.end();
-    });
+const ADMIN_FILE = path.join(DATA_DIR, 'admin.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+// Initialize Admin File if not exists
+if (!fs.existsSync(ADMIN_FILE)) {
+    fs.writeFileSync(ADMIN_FILE, JSON.stringify({ phone: '03000000000', pass: 'admin123' }, null, 2));
+}
+
+// Initialize Users File if not exists
+if (!fs.existsSync(USERS_FILE)) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify({}, null, 2));
+}
+
+function readUsersData() {
+    try {
+        const raw = fs.readFileSync(USERS_FILE, 'utf8');
+        return JSON.parse(raw) || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function writeUsersData(data) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+}
+
+function readAdminData() {
+    try {
+        const raw = fs.readFileSync(ADMIN_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch (e) {
+        return { phone: '03000000000', pass: 'admin123' };
+    }
+}
+
+function writeAdminData(data) {
+    fs.writeFileSync(ADMIN_FILE, JSON.stringify(data, null, 2));
 }
 
 function sanitizeUserData(userData) {
@@ -52,10 +62,9 @@ function sanitizeUserData(userData) {
     if (!userData.transactions) userData.transactions = [];
     if (!userData.parties) userData.parties = [];
     
-    // Default subscription fields
     if (userData.profile.isApproved === undefined) userData.profile.isApproved = false;
     if (!userData.profile.expiryDate) userData.profile.expiryDate = null;
-    if (!userData.profile.plan) userData.profile.plan = "Pending Payment";
+    if (!userData.profile.plan) userData.profile.plan = "Pending Approval";
 
     userData.transactions = userData.transactions.map(t => ({
         id: t.id || Date.now() + Math.random(),
@@ -73,29 +82,20 @@ function sanitizeUserData(userData) {
     return userData;
 }
 
-// Ensure Admin Config Exists
-async function initAdminConfig() {
-    let admin = await fetchCloudData('admin');
-    if (!admin) {
-        await saveCloudData('admin', { phone: '03000000000', pass: 'admin123' });
-    }
-}
-initAdminConfig();
-
-// Registration API
-app.post('/api/register', async (req, res) => {
+// Register API
+app.post('/api/register', (req, res) => {
     try {
         const { phone, pass, bizName } = req.body;
         if (!phone || !pass) return res.status(400).json({ error: "Phone aur Password zaroori hain!" });
 
         const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
-        const existing = await fetchCloudData(`users/${cleanPhone}`);
-        
-        if (existing && existing.profile) {
+        const allUsers = readUsersData();
+
+        if (allUsers[cleanPhone]) {
             return res.status(400).json({ error: "Yeh phone number pehle se registered hai! Login karein." });
         }
 
-        const newUser = {
+        allUsers[cleanPhone] = {
             profile: { 
                 phone: cleanPhone, 
                 pass, 
@@ -108,33 +108,31 @@ app.post('/api/register', async (req, res) => {
             parties: []
         };
 
-        const success = await saveCloudData(`users/${cleanPhone}`, newUser);
-        if (success) {
-            res.json({ success: true, user: newUser.profile });
-        } else {
-            res.status(500).json({ error: "Registration Server Error!" });
-        }
+        writeUsersData(allUsers);
+        res.json({ success: true, user: allUsers[cleanPhone].profile });
     } catch(err) {
         res.status(500).json({ error: "Server Registration Error" });
     }
 });
 
-// Universal Login API (Normal User + Super Admin)
-app.post('/api/login', async (req, res) => {
+// Universal Login API
+app.post('/api/login', (req, res) => {
     try {
         const { phone, pass } = req.body;
         if (!phone || !pass) return res.status(400).json({ error: "Credentials missing!" });
 
         const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
 
-        // Check if Super Admin Login
-        let adminData = await fetchCloudData('admin');
-        if (adminData && adminData.phone === cleanPhone && adminData.pass === pass) {
-            return res.json({ success: true, isAdmin: true, admin: adminData });
+        // Super Admin Check
+        const admin = readAdminData();
+        if (cleanPhone === admin.phone && pass === admin.pass) {
+            return res.json({ success: true, isAdmin: true, admin });
         }
 
-        // Normal User Login
-        let userData = await fetchCloudData(`users/${cleanPhone}`);
+        // Normal User Check
+        const allUsers = readUsersData();
+        let userData = allUsers[cleanPhone];
+
         if (!userData || !userData.profile) {
             return res.status(404).json({ error: "Invalid Phone Number ya Password! Pehle account register karein." });
         }
@@ -144,8 +142,9 @@ app.post('/api/login', async (req, res) => {
         }
 
         userData = sanitizeUserData(userData);
+        allUsers[cleanPhone] = userData;
+        writeUsersData(allUsers);
 
-        // Check Admin Approval & Plan Expiry
         if (!userData.profile.isApproved) {
             return res.status(403).json({ error: "Aapka account abhi active nahi hai. Access ke liye Super Admin se contact karke payment karein." });
         }
@@ -153,7 +152,7 @@ app.post('/api/login', async (req, res) => {
         if (userData.profile.expiryDate) {
             const today = new Date().toISOString().split('T')[0];
             if (today > userData.profile.expiryDate) {
-                return res.status(403).json({ error: `Aapka subscription plan (${userData.profile.plan}) expire ho gaya hai! Renew karwane ke liye Admin se contact karein.` });
+                return res.status(403).json({ error: `Aapka plan (${userData.profile.plan}) expire ho gaya hai! Renew karwane ke liye Admin se contact karein.` });
             }
         }
 
@@ -163,81 +162,82 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Super Admin APIs
-app.get('/api/admin/get-users', async (req, res) => {
+// Admin Get Users API
+app.get('/api/admin/get-users', (req, res) => {
     try {
-        let usersData = await fetchCloudData('users');
-        let userList = [];
-        if (usersData) {
-            for (let phone in usersData) {
-                if (usersData[phone] && usersData[phone].profile) {
-                    userList.push(usersData[phone].profile);
-                }
+        const allUsers = readUsersData();
+        const userList = [];
+        for (let key in allUsers) {
+            if (allUsers[key] && allUsers[key].profile) {
+                userList.push(allUsers[key].profile);
             }
         }
         res.json({ success: true, users: userList });
     } catch(err) {
-        res.status(500).json({ error: "Failed to fetch users list" });
+        res.status(500).json({ error: "Users list fetch error" });
     }
 });
 
-app.post('/api/admin/update-access', async (req, res) => {
+// Admin Update Access API
+app.post('/api/admin/update-access', (req, res) => {
     try {
         const { targetPhone, isApproved, days, planName } = req.body;
-        let userData = await fetchCloudData(`users/${targetPhone}`);
-        if (!userData) return res.status(404).json({ error: "User nahi mila!" });
+        const allUsers = readUsersData();
+        
+        if (!allUsers[targetPhone]) return res.status(404).json({ error: "User nahi mila!" });
 
-        userData.profile.isApproved = isApproved;
-        userData.profile.plan = planName;
+        allUsers[targetPhone].profile.isApproved = isApproved;
+        allUsers[targetPhone].profile.plan = planName;
 
         if (days > 0) {
             let expDate = new Date();
             expDate.setDate(expDate.getDate() + Number(days));
-            userData.profile.expiryDate = expDate.toISOString().split('T')[0];
+            allUsers[targetPhone].profile.expiryDate = expDate.toISOString().split('T')[0];
         } else if (days === 0) {
-            userData.profile.expiryDate = null; // Lifetime access
+            allUsers[targetPhone].profile.expiryDate = null;
         }
 
-        await saveCloudData(`users/${targetPhone}`, userData);
+        writeUsersData(allUsers);
         res.json({ success: true });
     } catch(err) {
-        res.status(500).json({ error: "Failed to update user access" });
+        res.status(500).json({ error: "Access update failed" });
     }
 });
 
-app.post('/api/admin/update-password', async (req, res) => {
+// Admin Update Password API
+app.post('/api/admin/update-password', (req, res) => {
     try {
         const { newPass } = req.body;
-        let adminData = await fetchCloudData('admin');
-        adminData.pass = newPass;
-        await saveCloudData('admin', adminData);
+        const admin = readAdminData();
+        admin.pass = newPass;
+        writeAdminData(admin);
         res.json({ success: true });
     } catch(err) {
         res.status(500).json({ error: "Password update failed" });
     }
 });
 
-// Save User Data API
-app.post('/api/save-data', async (req, res) => {
+// Save Data API
+app.post('/api/save-data', (req, res) => {
     try {
         const { phone, transactions, parties } = req.body;
         if (!phone) return res.status(400).json({ error: "Phone ID missing!" });
 
         const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
-        let userData = await fetchCloudData(`users/${cleanPhone}`);
+        const allUsers = readUsersData();
 
-        if (!userData || !userData.profile) {
+        if (!allUsers[cleanPhone]) {
             return res.status(404).json({ error: "User profile not found!" });
         }
 
-        userData.transactions = transactions || [];
-        userData.parties = parties || [];
+        allUsers[cleanPhone].transactions = transactions || [];
+        allUsers[cleanPhone].parties = parties || [];
 
-        await saveCloudData(`users/${cleanPhone}`, userData);
+        writeUsersData(allUsers);
         res.json({ success: true });
     } catch(err) {
         res.status(500).json({ error: "Server Save Error" });
     }
 });
 
-app.listen(PORT, () => console.log(`Super Admin POS Backend Running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Stable Local Engine POS Backend Running on port ${PORT}`));
