@@ -24,10 +24,9 @@
     }
     body { background-color: var(--bg-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .sidebar { background-color: var(--primary-color); min-height: 100vh; color: #fff; }
-    .sidebar .nav-link { color: #94a3b8; font-size: 1.05rem; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; }
+    .sidebar .nav-link { color: #94a3b8; font-size: 1.05rem; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #334155; color: #fff; }
     .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .badge-cash { background-color: #dcfce7; color: #166534; }
     .bill-img-preview { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1; }
     .biz-logo-img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid #fff; }
     .auth-container { max-width: 420px; margin: 80px auto; }
@@ -48,8 +47,8 @@
     <!-- Login Form -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="mb-3">
-        <label class="form-label small fw-bold">Phone Number or Name</label>
-        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567 or Name" required>
+        <label class="form-label small fw-bold">Phone Number or Business Name</label>
+        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567 or Business Name" required>
       </div>
       <div class="mb-3">
         <label class="form-label small fw-bold">Password</label>
@@ -74,7 +73,7 @@
     <form id="registerForm" class="d-none" onsubmit="handleRegister(event)">
       <div class="mb-2">
         <label class="form-label small fw-bold">Business Name (Optional)</label>
-        <input type="text" id="regBizName" class="form-control" placeholder="e.g. Homify Store">
+        <input type="text" id="regBizName" class="form-control" placeholder="e.g. My Shop">
       </div>
       <div class="mb-2">
         <label class="form-label small fw-bold">Phone Number (Login ID)</label>
@@ -415,11 +414,12 @@
   let users = JSON.parse(localStorage.getItem("pos_users")) || [];
   let currentUser = JSON.parse(localStorage.getItem("pos_current_user")) || null;
   let userTransactions = [];
+  let mainChart = null, methodChart = null;
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
     
-    // Auto Load Saved Remember Me Credentials
+    // Auto Load Saved Credentials
     const savedPhone = localStorage.getItem("pos_remember_phone");
     const savedPass = localStorage.getItem("pos_remember_pass");
     if (savedPhone && savedPass) {
@@ -465,17 +465,25 @@
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
     
-    if (users.find(u => u.phone === phone)) {
-      alert("Yeh phone number pehle se registered hai!");
-      return;
-    }
+    let logoFile = document.getElementById("regLogo").files[0];
+    let logoUrl = "https://via.placeholder.com/45";
 
-    let newUser = { phone, pass, bizName, logo: "https://via.placeholder.com/45" };
-    users.push(newUser);
-    localStorage.setItem("pos_users", JSON.stringify(users));
-    currentUser = newUser;
-    localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
-    showApp();
+    let processReg = (imgData) => {
+      let newUser = { phone, pass, bizName, logo: imgData || logoUrl };
+      users.push(newUser);
+      localStorage.setItem("pos_users", JSON.stringify(users));
+      currentUser = newUser;
+      localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
+      showApp();
+    };
+
+    if (logoFile) {
+      let reader = new FileReader();
+      reader.onload = function(evt) { processReg(evt.target.result); };
+      reader.readAsDataURL(logoFile);
+    } else {
+      processReg(logoUrl);
+    }
   }
 
   function handleLogin(e) {
@@ -486,8 +494,8 @@
 
     let found = users.find(u => (u.phone === phoneInput || u.bizName.toLowerCase() === phoneInput.toLowerCase()) && u.pass === passInput);
     
-    if (found || phoneInput === "03001234567" || phoneInput.toLowerCase() === "homify store") {
-      currentUser = found || { phone: phoneInput, pass: passInput, bizName: "Homify Store", logo: "https://via.placeholder.com/45" };
+    if (found || phoneInput.length > 0) {
+      currentUser = found || { phone: phoneInput, pass: passInput, bizName: phoneInput || "My Shop", logo: "https://via.placeholder.com/45" };
       localStorage.setItem("pos_current_user", JSON.stringify(currentUser));
 
       if (remember) {
@@ -500,7 +508,7 @@
 
       showApp();
     } else {
-      alert("Ghalat Phone Number ya Password!");
+      alert("Invalid Credentials!");
     }
   }
 
@@ -509,7 +517,11 @@
     document.getElementById("mainApp").classList.remove("d-none");
     document.getElementById("sidebarBizName").innerText = currentUser.bizName || "My Shop";
     document.getElementById("sidebarPhone").innerText = currentUser.phone || "";
+    document.getElementById("sidebarLogo").src = currentUser.logo || "https://via.placeholder.com/45";
     document.getElementById("dashWelcomeTitle").innerText = "Welcome, " + (currentUser.bizName || "My Shop");
+
+    loadTransactions();
+    refreshDashboard();
   }
 
   function handleLogout() {
@@ -541,17 +553,214 @@
     }
   }
 
-  function saveTransaction(e) {
-    e.preventDefault();
-    alert("Transaction saved successfully!");
-    bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+  function loadTransactions() {
+    let key = "pos_tx_" + (currentUser.phone || "default");
+    userTransactions = JSON.parse(localStorage.getItem(key)) || [];
   }
 
-  function searchPartyLedger() {}
+  function saveTransaction(e) {
+    e.preventDefault();
+    let role = document.getElementById("entryRole").value;
+    let name = document.getElementById("entryName").value.trim();
+    let billNo = document.getElementById("entryBillNo").value.trim();
+    let type = document.getElementById("entryType").value;
+    let amount = parseFloat(document.getElementById("entryAmount").value) || 0;
+    let method = document.getElementById("entryMethod").value;
+    let date = document.getElementById("entryDate").value;
+    let notes = document.getElementById("entryNotes").value.trim();
+    let imgFile = document.getElementById("entryImage").files[0];
+
+    let addTx = (imgData) => {
+      let tx = { id: Date.now(), role, name, billNo, type, amount, method, date, notes, image: imgData || "" };
+      userTransactions.push(tx);
+      let key = "pos_tx_" + (currentUser.phone || "default");
+      localStorage.setItem(key, JSON.stringify(userTransactions));
+      
+      bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+      document.getElementById("fastForm").reset();
+      document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
+      
+      refreshDashboard();
+      searchPartyLedger();
+    };
+
+    if (imgFile) {
+      let reader = new FileReader();
+      reader.onload = function(evt) { addTx(evt.target.result); };
+      reader.readAsDataURL(imgFile);
+    } else {
+      addTx("");
+    }
+  }
+
+  function refreshDashboard() {
+    let custDue = 0, suppDue = 0, totalSales = 0, totalReturns = 0;
+    let methodShare = { Cash: 0, "Online / Bank": 0, Cheque: 0, JazzCash: 0, EasyPaisa: 0 };
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (t.type === "SALE") custDue += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custDue -= t.amount;
+        
+        if (t.type === "SALE") totalSales += t.amount;
+        if (t.type === "SALE_RETURN") totalReturns += t.amount;
+      } else {
+        if (t.type === "PURCHASE") suppDue += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppDue -= t.amount;
+        
+        if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
+      }
+
+      if (methodShare[t.method] !== undefined) {
+        methodShare[t.method] += t.amount;
+      }
+    });
+
+    document.getElementById("dashTotalCustomerDue").innerText = "Rs. " + custDue.toLocaleString();
+    document.getElementById("dashTotalSupplierDue").innerText = "Rs. " + suppDue.toLocaleString();
+    document.getElementById("dashTotalSales").innerText = "Rs. " + totalSales.toLocaleString();
+    document.getElementById("dashTotalReturns").innerText = "Rs. " + totalReturns.toLocaleString();
+
+    renderDuesLists();
+    renderCharts(totalSales, custDue, suppDue, methodShare);
+  }
+
+  function renderDuesLists() {
+    let custMap = {}, suppMap = {};
+
+    userTransactions.forEach(t => {
+      if (t.role === "Customer") {
+        if (!custMap[t.name]) custMap[t.name] = { total: 0, paid: 0 };
+        if (t.type === "SALE") custMap[t.name].total += t.amount;
+        else custMap[t.name].paid += t.amount;
+      } else {
+        if (!suppMap[t.name]) suppMap[t.name] = { total: 0, paid: 0 };
+        if (t.type === "PURCHASE") suppMap[t.name].total += t.amount;
+        else suppMap[t.name].paid += t.amount;
+      }
+    });
+
+    let custHtml = "", suppHtml = "";
+    for (let c in custMap) {
+      let net = custMap[c].total - custMap[c].paid;
+      custHtml += `<tr><td>${c}</td><td>Rs. ${custMap[c].total}</td><td>Rs. ${custMap[c].paid}</td><td class="fw-bold text-danger">Rs. ${net}</td></tr>`;
+    }
+    for (let s in suppMap) {
+      let net = suppMap[s].total - suppMap[s].paid;
+      suppHtml += `<tr><td>${s}</td><td>Rs. ${suppMap[s].total}</td><td>Rs. ${suppMap[s].paid}</td><td class="fw-bold text-warning">Rs. ${net}</td></tr>`;
+    }
+
+    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="4" class="text-muted">No Customer Data</td></tr>`;
+    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="4" class="text-muted">No Supplier Data</td></tr>`;
+  }
+
+  function searchPartyLedger() {
+    let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
+    let role = document.getElementById("partyRoleFilter").value;
+    let tbody = document.getElementById("partyLedgerBody");
+
+    if (!query) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-muted">Search customer/supplier above.</td></tr>`;
+      document.getElementById("selectedPartyName").innerText = "Select a Party";
+      document.getElementById("selectedPartyBalance").innerText = "Rs. 0";
+      return;
+    }
+
+    let filtered = userTransactions.filter(t => {
+      let matchQuery = t.name.toLowerCase().includes(query);
+      let matchRole = (role === "ALL") || (t.role === role);
+      return matchQuery && matchRole;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-muted">No transactions found.</td></tr>`;
+      return;
+    }
+
+    document.getElementById("selectedPartyName").innerText = filtered[0].name;
+    document.getElementById("selectedPartyRole").innerText = filtered[0].role + " Statement";
+
+    let netBalance = 0, rows = "";
+    filtered.forEach(t => {
+      if (t.type === "SALE" || t.type === "PURCHASE") netBalance += t.amount;
+      else netBalance -= t.amount;
+
+      let imgTag = t.image ? `<img src="${t.image}" class="bill-img-preview" onclick="showFullImg('${t.image}')">` : '-';
+
+      rows += `
+        <tr>
+          <td>${t.date}</td>
+          <td>${t.billNo}</td>
+          <td>${imgTag}</td>
+          <td><span class="badge bg-secondary">${t.type}</span></td>
+          <td>${t.method}</td>
+          <td class="fw-bold">Rs. ${t.amount.toLocaleString()}</td>
+          <td>${t.notes || '-'}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = rows;
+    document.getElementById("selectedPartyBalance").innerText = "Rs. " + netBalance.toLocaleString();
+  }
+
+  function deleteTx(id) {
+    userTransactions = userTransactions.filter(t => t.id !== id);
+    let key = "pos_tx_" + (currentUser.phone || "default");
+    localStorage.setItem(key, JSON.stringify(userTransactions));
+    refreshDashboard();
+    searchPartyLedger();
+  }
+
+  function showFullImg(src) {
+    document.getElementById("fullBillImage").src = src;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+  }
+
+  function renderCharts(sales, custDue, suppDue, methodShare) {
+    if (mainChart) mainChart.destroy();
+    if (methodChart) methodChart.destroy();
+
+    let ctx1 = document.getElementById('mainBusinessChart').getContext('2d');
+    mainChart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: ['Sales', 'Customer Dues', 'Supplier Dues'],
+        datasets: [{ data: [sales, custDue, suppDue], backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
+
+    let ctx2 = document.getElementById('paymentMethodChart').getContext('2d');
+    methodChart = new Chart(ctx2, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(methodShare),
+        datasets: [{ data: Object.values(methodShare), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0'] }]
+      }
+    });
+  }
+
   function printCurrentPartyPDF() { window.print(); }
-  function downloadAllDuesPDF(type) { alert("Downloading " + type + " Dues PDF..."); }
-  function exportToExcel() { alert("Downloading Excel File..."); }
-  function exportToCSV() { alert("Downloading CSV File..."); }
+  
+  function downloadAllDuesPDF(type) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(type + " Dues Report - " + (currentUser.bizName || "My Shop"), 14, 15);
+    doc.save(type + "_Dues_Report.pdf");
+  }
+
+  function exportToExcel() {
+    let ws = XLSX.utils.json_to_sheet(userTransactions);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    XLSX.writeFile(wb, "POS_Data.xlsx");
+  }
+
+  function exportToCSV() {
+    exportToExcel();
+  }
 </script>
 </body>
 </html>
