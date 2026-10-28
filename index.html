@@ -42,14 +42,14 @@
   <div class="card card-stat p-4 auth-container bg-white shadow-lg">
     <div class="text-center mb-3">
       <h3 class="fw-bold text-primary"><i class="fa-solid fa-shop me-2"></i>SMART POS</h3>
-      <p class="text-muted small" id="authTitle">Sign in to your Business Account</p>
+      <p class="text-muted small" id="authTitle">Sign in with Unique Phone Number</p>
     </div>
 
     <!-- Login Form -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="mb-3">
-        <label class="form-label small fw-bold">Phone Number or Business Name</label>
-        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567 or Business Name" required>
+        <label class="form-label small fw-bold">Phone Number (Unique ID)</label>
+        <input type="text" id="loginPhone" class="form-control" placeholder="03001234567" required>
       </div>
       <div class="mb-3">
         <label class="form-label small fw-bold">Password</label>
@@ -71,11 +71,11 @@
     <!-- Register Form -->
     <form id="registerForm" class="d-none" onsubmit="handleRegister(event)">
       <div class="mb-2">
-        <label class="form-label small fw-bold">Business Name (Optional)</label>
-        <input type="text" id="regBizName" class="form-control" placeholder="e.g. My Shop">
+        <label class="form-label small fw-bold">Business Name</label>
+        <input type="text" id="regBizName" class="form-control" placeholder="e.g. M TEX" required>
       </div>
       <div class="mb-2">
-        <label class="form-label small fw-bold">Phone Number (Login ID)</label>
+        <label class="form-label small fw-bold">Phone Number (Unique Login ID)</label>
         <input type="text" id="regPhone" class="form-control" placeholder="03001234567" required>
       </div>
       <div class="mb-2">
@@ -84,10 +84,6 @@
           <input type="password" id="regPass" class="form-control" placeholder="******" required>
           <i class="fa-solid fa-eye pwd-toggle" id="toggleRegPass" onclick="togglePasswordVisibility('regPass', 'toggleRegPass')"></i>
         </div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label small fw-bold">Business Logo (Optional)</label>
-        <input type="file" id="regLogo" class="form-control" accept="image/*">
       </div>
       <button type="submit" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
       <div class="text-center">
@@ -104,7 +100,6 @@
   <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
     <div class="container-fluid">
       <div class="d-flex align-items-center">
-        <img id="mobileLogo" src="https://via.placeholder.com/40" class="biz-logo-img me-2" alt="Logo">
         <h6 class="fw-bold text-white mb-0" id="mobileBizName">My Shop</h6>
       </div>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
@@ -130,7 +125,6 @@
     <!-- Desktop Sidebar -->
     <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block">
       <div class="d-flex align-items-center mb-4 pb-2 border-bottom border-secondary">
-        <img id="sidebarLogo" src="https://via.placeholder.com/45" class="biz-logo-img me-2" alt="Logo">
         <div>
           <h6 class="fw-bold text-white mb-0" id="sidebarBizName">My Shop</h6>
           <small class="text-muted" id="sidebarPhone">03000000000</small>
@@ -400,7 +394,7 @@
               <label class="form-label small fw-bold">Date</label>
               <input type="date" id="entryDate" class="form-control form-control-sm" required>
             </div>
-            <div class="col-6">
+            <div class="col-6" id="paymentMethodWrapper">
               <label class="form-label small fw-bold">Payment Method</label>
               <select id="entryMethod" class="form-select form-select-sm">
                 <option value="Cash">Cash</option>
@@ -498,11 +492,11 @@
     if(isRegister) {
       document.getElementById("loginForm").classList.add("d-none");
       document.getElementById("registerForm").classList.remove("d-none");
-      document.getElementById("authTitle").innerText = "Create Your Business Account";
+      document.getElementById("authTitle").innerText = "Create Business Account";
     } else {
       document.getElementById("registerForm").classList.add("d-none");
       document.getElementById("loginForm").classList.remove("d-none");
-      document.getElementById("authTitle").innerText = "Sign in to your Business Account";
+      document.getElementById("authTitle").innerText = "Sign in with Unique Phone Number";
     }
   }
 
@@ -517,7 +511,7 @@
       return;
     }
 
-    let newUser = { phone, pass, bizName, logo: "https://via.placeholder.com/40" };
+    let newUser = { phone, pass, bizName };
     users.push(newUser);
     localStorage.setItem("pos_users", JSON.stringify(users));
     
@@ -532,7 +526,7 @@
     let passInput = document.getElementById("loginPass").value.trim();
     let remember = document.getElementById("rememberMe").checked;
 
-    let found = users.find(u => (u.phone === phoneInput || u.bizName.toLowerCase() === phoneInput.toLowerCase()) && u.pass === passInput);
+    let found = users.find(u => u.phone === phoneInput && u.pass === passInput);
     
     if (found) {
       currentUser = found;
@@ -548,7 +542,7 @@
 
       showApp();
     } else {
-      alert("Invalid Credentials! Pehle account register karein.");
+      alert("Invalid Phone Number or Password! Pehle account register karein.");
     }
   }
 
@@ -589,31 +583,52 @@
     let container = document.getElementById("multiRowsContainer");
     
     let options = role === "Supplier" ? `
-      <option value="PURCHASE">Purchase Bill (+)</option>
-      <option value="PAYMENT_PAID">Payment Paid (-)</option>
-      <option value="PURCHASE_RETURN">Purchase Return (-)</option>
+      <option value="PURCHASE_CREDIT">Purchase on Credit (Khareeda Udhar)</option>
+      <option value="PURCHASE_CASH">Purchase Cash (Naqad Khareeda)</option>
+      <option value="PAYMENT_PAID">Payment Paid (Paisa Diya)</option>
+      <option value="PURCHASE_RETURN">Purchase Return</option>
     ` : `
-      <option value="SALE">Sale Bill (+)</option>
-      <option value="PAYMENT_REC">Payment Rec (-)</option>
-      <option value="SALE_RETURN">Sale Return (-)</option>
+      <option value="SALE_CREDIT">Sell on Credit (Becha Udhar)</option>
+      <option value="SALE_CASH">Sell Cash (Naqad Becha)</option>
+      <option value="PAYMENT_REC">Payment Received (Paisa Mila)</option>
+      <option value="SALE_RETURN">Sale Return</option>
     `;
 
     let rowDiv = document.createElement("div");
     rowDiv.className = "multi-entry-row";
     rowDiv.innerHTML = `
       <div class="row g-2 align-items-center">
-        <div class="col-5">
-          <select class="form-select form-select-sm entry-row-type fw-bold">${options}</select>
+        <div class="col-7">
+          <select class="form-select form-select-sm entry-row-type fw-bold" onchange="checkPaymentVisibility()">${options}</select>
         </div>
-        <div class="col-5">
-          <input type="number" class="form-control form-control-sm entry-row-amount fw-bold text-success" placeholder="Amount (Rs.)" required>
+        <div class="col-3">
+          <input type="number" class="form-control form-control-sm entry-row-amount fw-bold text-success" placeholder="Amount" required oninput="checkPaymentVisibility()">
         </div>
         <div class="col-2 text-end">
-          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.multi-entry-row').remove()"><i class="fa-solid fa-trash"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.multi-entry-row').remove(); checkPaymentVisibility();"><i class="fa-solid fa-trash"></i></button>
         </div>
       </div>
     `;
     container.appendChild(rowDiv);
+    checkPaymentVisibility();
+  }
+
+  function checkPaymentVisibility() {
+    let rowTypes = document.querySelectorAll(".entry-row-type");
+    let hasCashOrPayment = false;
+    rowTypes.forEach(el => {
+      let val = el.value;
+      if (val === "SALE_CASH" || val === "PURCHASE_CASH" || val === "PAYMENT_REC" || val === "PAYMENT_PAID") {
+        hasCashOrPayment = true;
+      }
+    });
+
+    let pmWrapper = document.getElementById("paymentMethodWrapper");
+    if (hasCashOrPayment) {
+      pmWrapper.classList.remove("d-none");
+    } else {
+      pmWrapper.classList.add("d-none");
+    }
   }
 
   function openAddPartyModal(role) {
@@ -691,19 +706,19 @@
 
     userTransactions.forEach(t => {
       if (t.role === "Customer") {
-        if (t.type === "SALE") custDue += t.amount;
+        if (t.type === "SALE_CREDIT") custDue += t.amount;
         else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custDue -= t.amount;
         
-        if (t.type === "SALE") totalSales += t.amount;
+        if (t.type === "SALE_CREDIT" || t.type === "SALE_CASH") totalSales += t.amount;
         if (t.type === "SALE_RETURN") totalReturns += t.amount;
       } else {
-        if (t.type === "PURCHASE") suppDue += t.amount;
+        if (t.type === "PURCHASE_CREDIT") suppDue += t.amount;
         else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppDue -= t.amount;
         
         if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
       }
 
-      if (methodShare[t.method] !== undefined) {
+      if ((t.type === "SALE_CASH" || t.type === "PURCHASE_CASH" || t.type === "PAYMENT_REC" || t.type === "PAYMENT_PAID") && methodShare[t.method] !== undefined) {
         methodShare[t.method] += t.amount;
       }
     });
@@ -731,12 +746,12 @@
     userTransactions.forEach(t => {
       if (t.role === "Customer") {
         if (!custMap[t.name]) custMap[t.name] = { phone: '-', total: 0, paid: 0 };
-        if (t.type === "SALE") custMap[t.name].total += t.amount;
-        else custMap[t.name].paid += t.amount;
+        if (t.type === "SALE_CREDIT") custMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custMap[t.name].paid += t.amount;
       } else {
         if (!suppMap[t.name]) suppMap[t.name] = { phone: '-', total: 0, paid: 0 };
-        if (t.type === "PURCHASE") suppMap[t.name].total += t.amount;
-        else suppMap[t.name].paid += t.amount;
+        if (t.type === "PURCHASE_CREDIT") suppMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppMap[t.name].paid += t.amount;
       }
     });
 
@@ -786,12 +801,12 @@
     userTransactions.forEach(t => {
       if (t.role === "Customer") {
         if (!custMap[t.name]) custMap[t.name] = { total: 0, paid: 0 };
-        if (t.type === "SALE") custMap[t.name].total += t.amount;
-        else custMap[t.name].paid += t.amount;
+        if (t.type === "SALE_CREDIT") custMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") custMap[t.name].paid += t.amount;
       } else {
-        if (!suppMap[t.name]) suppMap[t.name] = { total: 0, paid: 0 };
-        if (t.type === "PURCHASE") suppMap[t.name].total += t.amount;
-        else suppMap[t.name].paid += t.amount;
+        if (!suppMap[t.name]) suppMap[t.name] = { phone: '-', total: 0, paid: 0 };
+        if (t.type === "PURCHASE_CREDIT") suppMap[t.name].total += t.amount;
+        else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") suppMap[t.name].paid += t.amount;
       }
     });
 
@@ -836,7 +851,7 @@
 
     let netBalance = 0, rows = "";
     filtered.forEach(t => {
-      if (t.type === "SALE" || t.type === "PURCHASE") netBalance += t.amount;
+      if (t.type === "SALE_CREDIT" || t.type === "PURCHASE_CREDIT") netBalance += t.amount;
       else netBalance -= t.amount;
 
       rows += `
