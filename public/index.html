@@ -721,7 +721,6 @@
     new bootstrap.Modal(document.getElementById('entryModal')).show();
   }
 
-  // SMART FUZZY MATCH & SUGGESTIONS
   function updatePartySuggestions() {
     let role = document.getElementById("entryRole").value;
     let datalist = document.getElementById("partySuggestions");
@@ -738,7 +737,6 @@
     });
   }
 
-  // CHECK LIVE RED BALANCE ON INPUT
   function checkPartyLiveBalance() {
     let role = document.getElementById("entryRole").value;
     let typedName = document.getElementById("entryName").value.trim().toLowerCase();
@@ -749,7 +747,6 @@
       return;
     }
 
-    // Fuzzy Match: Find closest matching party name
     let matchedPartyName = null;
     let allNames = new Set();
     userParties.filter(p => p.role === role).forEach(p => allNames.add(p.name));
@@ -893,10 +890,13 @@
 
       if (openingBal > 0) {
         let txType = "";
+        let txMethod = "Credit";
         if (role === "Customer") {
           txType = openingType === "RECEIVABLE" ? "SALE_CREDIT" : "PAYMENT_REC";
+          if (openingType !== "RECEIVABLE") txMethod = "Cash";
         } else {
           txType = openingType === "PAYABLE" ? "PURCHASE_CREDIT" : "PAYMENT_PAID";
+          if (openingType !== "PAYABLE") txMethod = "Cash";
         }
 
         userTransactions.push({
@@ -906,7 +906,7 @@
           billNo: "OPENING-BAL",
           type: txType,
           amount: openingBal,
-          method: "Cash",
+          method: txMethod,
           date: new Date().toISOString().split('T')[0],
           notes: "Purana Khata / Opening Balance Entry",
           img: currentOpeningBase64
@@ -933,13 +933,11 @@
     }
   }
 
-  // SMART SAVE TRANSACTION (WITH FUZZY MATCH & SPLIT PAYMENTS)
   async function saveTransaction(e) {
     e.preventDefault();
     let role = document.getElementById("entryRole").value;
     let rawName = document.getElementById("entryName").value.trim().replace(/\s+/g, ' ');
     
-    // Fuzzy match check to prevent duplicate party names due to spelling variations
     let matchedParty = userParties.find(p => p.role === role && p.name.toLowerCase().replace(/\s+/g, '') === rawName.toLowerCase().replace(/\s+/g, ''));
     let name = matchedParty ? matchedParty.name : rawName;
 
@@ -950,7 +948,6 @@
     let rowTypes = document.querySelectorAll(".entry-row-type");
     let rowAmounts = document.querySelectorAll(".entry-row-amount");
 
-    // Process main line items/transactions
     rowTypes.forEach((typeEl, index) => {
       let type = typeEl.value;
       let amount = parseFloat(rowAmounts[index].value) || 0;
@@ -959,7 +956,6 @@
         let isCashOrPay = (type === "SALE_CASH" || type === "PURCHASE_CASH" || type === "PAYMENT_REC" || type === "PAYMENT_PAID");
         
         if (isCashOrPay) {
-          // Handle Split Payments if multiple methods are provided
           let splitRows = document.querySelectorAll(".split-row");
           if (splitRows.length > 0) {
             splitRows.forEach(sr => {
@@ -1052,7 +1048,8 @@
         if (t.type === "PURCHASE_RETURN") totalReturns += t.amount;
       }
 
-      if (methodShare[t.method] !== undefined) {
+      // ONLY count actual cash/payment methods, exclude credit/dues
+      if (t.method && t.method !== "Credit" && methodShare[t.method] !== undefined) {
         methodShare[t.method] += t.amount;
       }
     });
@@ -1221,7 +1218,7 @@
           <td>${t.date}</td>
           <td>${t.billNo}</td>
           <td><span class="badge bg-secondary">${t.type}</span></td>
-          <td class="fw-bold">Rs. ${t.amount.toLocaleString()} (${t.method || 'Cash'})</td>
+          <td class="fw-bold">Rs. ${t.amount.toLocaleString()} (${t.method || 'Credit'})</td>
           <td>${picBtn}</td>
           <td><button class="btn btn-sm btn-danger" onclick="deleteTx(${t.id})"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
@@ -1305,7 +1302,7 @@
       doc.text(`No transactions found for this party.`, 14, y);
     } else {
       filtered.forEach(t => {
-        doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} (${t.method || 'Cash'}) | ${t.notes || '-'}`, 14, y);
+        doc.text(`${t.date} | ${t.billNo} | ${t.type} | Rs. ${t.amount.toLocaleString()} (${t.method || 'Credit'}) | ${t.notes || '-'}`, 14, y);
         y += 8;
       });
     }
@@ -1339,7 +1336,7 @@
     if (typeof userTransactions !== 'undefined') {
       userTransactions.forEach(t => {
         if (t.role === type) {
-          if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 0 };
+          if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 1 };
           if (type === "Customer") {
             if (t.type === "SALE_CREDIT") duesMap[t.name].total += Number(t.amount) || 0;
             else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") duesMap[t.name].paid += Number(t.amount) || 0;
