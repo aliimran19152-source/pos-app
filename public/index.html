@@ -142,7 +142,7 @@
   </div>
 
   <!-- ADMIN PASSWORD UPDATE SECTION -->
-  <div class="card card-stat p-3 bg-white style='max-width:400px;'">
+  <div class="card card-stat p-3 bg-white" style="max-width:400px;">
     <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
     <div class="input-group input-group-sm mb-2">
       <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password">
@@ -261,7 +261,7 @@
                   <option value="Supplier">Suppliers</option>
                 </select>
               </div>
-              <div class="col-4 col-md-3 text-end"><button class="btn btn-outline-danger w-100 fw-bold" onclick="printCurrentPartyPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button></div>
+              <div class="col-4 col-md-3 text-end"><button class="btn btn-outline-danger w-100 fw-bold" onclick="generatePartyLedgerPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Download PDF</button></div>
             </div>
           </div>
 
@@ -301,7 +301,8 @@
           <h4 class="fw-bold mb-3">Reports & Export</h4>
           <div class="row g-2">
             <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-excel text-success fa-2x mb-2"></i><button onclick="exportToExcel()" class="btn btn-sm btn-success fw-bold w-100">Excel Export</button></div></div>
-            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Dues PDF</button></div></div>
+            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-danger fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Customer')" class="btn btn-sm btn-danger fw-bold w-100">Customer Dues PDF</button></div></div>
+            <div class="col-6 col-md-4"><div class="card card-stat p-3 bg-white text-center"><i class="fa-solid fa-file-pdf text-warning fa-2x mb-2"></i><button onclick="downloadAllDuesPDF('Supplier')" class="btn btn-sm btn-warning fw-bold w-100 text-dark">Supplier Dues PDF</button></div></div>
           </div>
         </div>
       </div>
@@ -555,7 +556,6 @@
         localStorage.removeItem("pos_remember_pass");
       }
 
-      // Check if Admin Login or Normal User
       if (resData.isAdmin) {
         showSuperAdminApp();
       } else {
@@ -885,7 +885,7 @@
     });
 
     if (!userParties.find(p => p.name.toLowerCase() === name.toLowerCase() && p.role === role)) {
-      userParties.push({ id: Date.now(), role, name, phone: '-' });
+      userParties.push({ id: Date.now(), role, name: '-' });
     }
 
     await saveToServer();
@@ -1115,12 +1115,94 @@
     });
   }
 
-  function printCurrentPartyPDF() { window.print(); }
+  // FIXED LEDGER PDF GENERATOR
+  function generatePartyLedgerPDF() {
+    let partyName = document.getElementById("selectedPartyName").innerText;
+    if (partyName === "Select a Party") {
+      return alert("Pehle kisi party ka ledger search karein!");
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text(`Party Ledger: ${partyName}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Shop Name: ${currentUser ? currentUser.bizName : 'POS System'}`, 14, 22);
+    doc.text(`Net Balance: ${document.getElementById("selectedPartyBalance").innerText}`, 14, 28);
+
+    let rows = [];
+    let query = document.getElementById("partySearchInput").value.trim().toLowerCase();
+    let role = document.getElementById("partyRoleFilter").value;
+
+    let filtered = userTransactions.filter(t => {
+      let matchQuery = t.name.toLowerCase().includes(query);
+      let matchRole = (role === "ALL") || (t.role === role);
+      return matchQuery && matchRole;
+    });
+
+    filtered.forEach(t => {
+      rows.push([t.date, t.billNo, t.type, `Rs. ${t.amount.toLocaleString()}`, t.method || 'Cash', t.notes || '-']);
+    });
+
+    doc.autoTable({
+      startY: 34,
+      head: [['Date', 'Bill #', 'Type', 'Amount', 'Payment Method', 'Notes']],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59] }
+    });
+
+    doc.save(`${partyName}_Ledger_Report.pdf`);
+  }
+
+  // FIXED DUES LIST PDF GENERATOR
   function downloadAllDuesPDF(type) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.text(type + " Dues Report - " + currentUser.bizName, 14, 15);
-    doc.save(type + "_Dues_Report.pdf");
+
+    doc.setFontSize(16);
+    doc.text(`${type} Dues Report`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Business Name: ${currentUser ? currentUser.bizName : 'POS System'}`, 14, 22);
+
+    let duesMap = {};
+    userTransactions.forEach(t => {
+      if (t.role === type) {
+        if (!duesMap[t.name]) duesMap[t.name] = { total: 0, paid: 0 };
+        if (type === "Customer") {
+          if (t.type === "SALE_CREDIT") duesMap[t.name].total += t.amount;
+          else if (t.type === "PAYMENT_REC" || t.type === "SALE_RETURN") duesMap[t.name].paid += t.amount;
+        } else {
+          if (t.type === "PURCHASE_CREDIT") duesMap[t.name].total += t.amount;
+          else if (t.type === "PAYMENT_PAID" || t.type === "PURCHASE_RETURN") duesMap[t.name].paid += t.amount;
+        }
+      }
+    });
+
+    let rows = [];
+    let grandTotal = 0;
+    for (let name in duesMap) {
+      let net = duesMap[name].total - duesMap[name].paid;
+      if (net !== 0) {
+        grandTotal += net;
+        rows.push([name, `Rs. ${net.toLocaleString()}`]);
+      }
+    }
+
+    doc.autoTable({
+      startY: 28,
+      head: [[`${type} Name`, 'Net Balance']],
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: type === 'Customer' ? [220, 53, 69] : [255, 193, 7] }
+    });
+
+    let finalY = doc.lastAutoTable.previous.finalY || 40;
+    doc.setFontSize(12);
+    doc.text(`Total Dues Amount: Rs. ${grandTotal.toLocaleString()}`, 14, finalY + 10);
+
+    doc.save(`${type}_Dues_Report.pdf`);
   }
 
   function exportToExcel() {
