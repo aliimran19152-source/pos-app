@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Shop POS & Super Admin System</title>
+  <title>Smart Shop POS & Ultimate Super Admin System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -17,7 +17,7 @@
     .sidebar .nav-link, .mobile-nav-link { color: #94a3b8; font-size: 1rem; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; text-decoration: none; display: block; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active, .mobile-nav-link.active { background-color: #334155; color: #fff; }
     .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .auth-container { max-width: 420px; margin: 60px auto; }
+    .auth-container { max-width: 440px; margin: 40px auto; }
     .pwd-wrapper { position: relative; }
     .pwd-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; }
     .mobile-header { background-color: var(--primary-color); color: white; padding: 10px 15px; }
@@ -34,6 +34,7 @@
       <p class="text-muted small" id="authTitle">Sign in with Unique Phone Number</p>
     </div>
 
+    <!-- LOGIN FORM -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="mb-3">
         <label class="form-label small fw-bold">Phone Number (Login ID)</label>
@@ -46,16 +47,20 @@
           <i class="fa-solid fa-eye pwd-toggle" id="toggleLoginPass" onclick="togglePasswordVisibility('loginPass', 'toggleLoginPass')"></i>
         </div>
       </div>
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="rememberMe">
-        <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="form-check mb-0">
+          <input class="form-check-input" type="checkbox" id="rememberMe">
+          <label class="form-check-label small fw-bold text-secondary" for="rememberMe">Remember Me</label>
+        </div>
+        <a href="#" class="small text-danger fw-bold text-decoration-none" onclick="toggleAuth('forgot')">Forgot Password?</a>
       </div>
       <button type="submit" id="loginBtn" class="btn btn-primary w-100 fw-bold py-2 mb-2">Login</button>
       <div class="text-center mb-2">
-        <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth(true)">Naya Account Banao</a></small>
+        <small class="text-muted">Account nahi hai? <a href="#" onclick="toggleAuth('register')">Naya Account Banao</a></small>
       </div>
     </form>
 
+    <!-- REGISTER FORM -->
     <form id="registerForm" class="d-none" onsubmit="handleRegister(event)">
       <div class="mb-2">
         <label class="form-label small fw-bold">Business Name</label>
@@ -74,63 +79,167 @@
       </div>
       <button type="submit" id="regBtn" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
       <div class="text-center">
-        <small class="text-muted">Pehle se account hai? <a href="#" onclick="toggleAuth(false)">Login Karein</a></small>
+        <small class="text-muted">Pehle se account hai? <a href="#" onclick="toggleAuth('login')">Login Karein</a></small>
       </div>
     </form>
+
+    <!-- FORGOT PASSWORD FORM -->
+    <form id="forgotForm" class="d-none" onsubmit="handleForgotRequest(event)">
+      <div class="p-2 alert alert-warning small mb-3">
+        <i class="fa-solid fa-info-circle me-1"></i> Apna registered phone number likhein, Admin tak aapki request chali jayegi.
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Registered Phone Number</label>
+        <input type="text" id="forgotPhone" class="form-control" placeholder="03001234567" required>
+      </div>
+      <button type="submit" class="btn btn-warning w-100 fw-bold text-dark mb-2">Request Password Reset</button>
+      <div class="text-center">
+        <small class="text-muted"><a href="#" onclick="toggleAuth('login')">Back to Login</a></small>
+      </div>
+    </form>
+
   </div>
 </div>
 
+<!-- REGISTRATION SUCCESS & ADMIN CONTACT MODAL -->
+<div class="modal fade" id="regSuccessModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-3">
+      <div class="modal-body">
+        <i class="fa-solid fa-circle-check text-success fa-4x mb-3"></i>
+        <h4 class="fw-bold text-dark">Account Created Successfully!</h4>
+        <p class="text-secondary small mb-3">Aapka account register ho gaya hai. System Access & Activation ke liye niche diye gaye number par raabta karein:</p>
+        
+        <div class="p-3 bg-light rounded border mb-3">
+          <h5 class="fw-bold text-primary mb-1"><i class="fa-solid fa-headset me-2"></i>POS Admin Support</h5>
+          <h3 class="fw-bold text-dark tracking-wide my-2">03243981059</h3>
+          <small class="text-muted">Service activation, subscription aur help ke liye contact karein.</small>
+        </div>
+
+        <a href="https://wa.me/923243981059" target="_blank" class="btn btn-success w-100 fw-bold py-2 mb-2">
+          <i class="fa-brands fa-whatsapp me-2"></i> Open WhatsApp Chat
+        </a>
+        <button type="button" class="btn btn-secondary w-100 fw-bold btn-sm" data-bs-dismiss="modal">Close & Go to Login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ULTIMATE SUPER ADMIN PANEL -->
 <div id="superAdminApp" class="container-fluid d-none p-3 p-md-4">
   <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-    <h3 class="fw-bold text-danger mb-0"><i class="fa-solid fa-user-shield me-2"></i>Super Admin Control Panel</h3>
+    <h3 class="fw-bold text-danger mb-0"><i class="fa-solid fa-user-shield me-2"></i>Ultimate Super Admin Control Panel</h3>
     <button class="btn btn-outline-danger fw-bold btn-sm" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout Admin</button>
   </div>
 
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-      <div class="card card-stat p-3 bg-white">
-        <small class="text-muted fw-bold" style="font-size:11px;">TOTAL USERS</small>
+      <div class="card card-stat p-3 bg-white border-start border-primary border-4">
+        <small class="text-muted fw-bold" style="font-size:11px;">TOTAL REGISTERED USERS</small>
         <h3 class="fw-bold text-primary mb-0" id="adminTotalUsers">0</h3>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card card-stat p-3 bg-white">
+      <div class="card card-stat p-3 bg-white border-start border-success border-4">
         <small class="text-muted fw-bold" style="font-size:11px;">ACTIVE SUBSCRIPTIONS</small>
         <h3 class="fw-bold text-success mb-0" id="adminActiveUsers">0</h3>
       </div>
     </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-stat p-3 bg-white border-start border-warning border-4">
+        <small class="text-muted fw-bold" style="font-size:11px;">PENDING / EXPIRED</small>
+        <h3 class="fw-bold text-warning mb-0" id="adminPendingUsers">0</h3>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card card-stat p-3 bg-white border-start border-danger border-4">
+        <small class="text-muted fw-bold" style="font-size:11px;">RESET PASS REQUESTS</small>
+        <h3 class="fw-bold text-danger mb-0" id="adminForgotCount">0</h3>
+      </div>
+    </div>
   </div>
 
+  <!-- SEARCH & FILTER BAR -->
+  <div class="card card-stat p-3 bg-white mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md-6">
+        <input type="text" id="adminUserSearch" class="form-control" placeholder="Search User by Name or Phone..." oninput="filterAdminUsers()">
+      </div>
+      <div class="col-6 col-md-3">
+        <select id="adminStatusFilter" class="form-select" onchange="filterAdminUsers()">
+          <option value="ALL">All Statuses</option>
+          <option value="ACTIVE">Active Users</option>
+          <option value="HOLD">Blocked / Hold</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-3 text-end">
+        <button class="btn btn-outline-primary w-100 fw-bold" onclick="loadAdminUsersList()"><i class="fa-solid fa-rotate me-1"></i> Refresh Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER MANAGEMENT TABLE -->
   <div class="card card-stat p-3 bg-white mb-4">
-    <h5 class="fw-bold mb-3">User Access & Subscription Approvals</h5>
+    <h5 class="fw-bold mb-3"><i class="fa-solid fa-users-gear me-2"></i>User Subscriptions, Expiry & Access Control</h5>
     <div class="table-responsive">
-      <table class="table table-striped table-bordered text-center align-middle" style="font-size:14px;">
+      <table class="table table-striped table-bordered text-center align-middle" style="font-size:13px;">
         <thead class="table-dark">
           <tr>
             <th>Business Name</th>
             <th>Phone ID</th>
-            <th>Current Plan</th>
-            <th>Expiry Date</th>
-            <th>Access Status</th>
-            <th>Action / Assign Plan</th>
+            <th>Password</th>
+            <th>Plan & Expiry</th>
+            <th>Custom Expiry Date</th>
+            <th>Private Note</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="adminUsersTableBody">
-          <tr><td colspan="6" class="text-muted">Loading users...</td></tr>
+          <tr><td colspan="8" class="text-muted">Loading users...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <div class="card card-stat p-3 bg-white" style="max-width:400px;">
-    <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
-    <div class="input-group input-group-sm mb-2">
-      <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password">
-      <button class="btn btn-danger fw-bold" onclick="updateAdminPass()">Change Password</button>
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <div class="card card-stat p-3 bg-white">
+        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
+        <div class="input-group input-group-sm mb-2">
+          <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password">
+          <button class="btn btn-danger fw-bold" onclick="updateAdminPass()">Change Password</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- CHANGE USER PASSWORD MODAL FOR ADMIN -->
+<div class="modal fade" id="adminResetPassModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white p-2 px-3">
+        <h6 class="modal-title fw-bold">Reset User Password</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="resetUserPhoneTarget">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">User Phone ID</label>
+          <input type="text" id="resetUserPhoneDisplay" class="form-control" readonly>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">New Password For User</label>
+          <input type="text" id="resetUserNewPass" class="form-control" placeholder="Enter new password" required>
+        </div>
+        <button type="button" class="btn btn-success w-100 fw-bold" onclick="submitUserPasswordChange()">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CLIENT POS APP (UNTOUCHED CORE) -->
 <div id="mainApp" class="container-fluid d-none p-0">
   <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
     <div class="container-fluid">
@@ -228,7 +337,6 @@
           </div>
         </div>
 
-        <!-- PARTY LEDGER SEARCH & QUICK PDF DOWNLOAD TAB -->
         <div class="tab-pane fade" id="tabLedger">
           <h4 class="fw-bold mb-3">Party Ledger Search</h4>
           <div class="card card-stat p-3 bg-white mb-3">
@@ -250,7 +358,6 @@
             </div>
           </div>
 
-          <!-- ALL PARTIES QUICK LIST WITH WORKING PDF BUTTONS -->
           <div class="card card-stat p-2 p-md-3 bg-white mb-3">
             <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-list me-1"></i> All Parties Quick PDF Download List</h6>
             <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
@@ -285,18 +392,67 @@
         </div>
 
         <div class="tab-pane fade" id="tabDues">
-          <h4 class="fw-bold mb-3">Market Dues Summary</h4>
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <div class="card card-stat p-3 bg-white">
-                <h6 class="fw-bold text-danger mb-2">Customer Dues List</h6>
-                <div class="table-responsive"><table class="table table-striped table-bordered text-center" style="font-size: 13px;"><thead class="table-dark"><tr><th>Customer</th><th>Net Due</th></tr></thead><tbody id="customerDuesBody"></tbody></table></div>
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h4 class="fw-bold mb-0">Market Combined Dues Summary</h4>
+            <div class="d-flex align-items-center gap-2">
+              <label class="fw-bold small mb-0 text-nowrap"><i class="fa-solid fa-filter me-1"></i> View Filter:</label>
+              <select id="duesFilterSelect" class="form-select form-select-sm fw-bold border-primary" style="min-width: 160px;" onchange="renderDuesLists()">
+                <option value="ALL">Show All Parties</option>
+                <option value="Customer">Customers Only</option>
+                <option value="Supplier">Suppliers Only</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-4" id="dueCardCustBox">
+              <div class="card card-stat p-3 bg-white border-start border-danger border-4">
+                <small class="text-muted fw-bold" style="font-size: 11px;">TOTAL CUSTOMER DUES (LENE HAIN)</small>
+                <h4 class="fw-bold text-danger mb-0" id="duesGrandCust">Rs. 0</h4>
               </div>
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-4" id="dueCardSuppBox">
+              <div class="card card-stat p-3 bg-white border-start border-warning border-4">
+                <small class="text-muted fw-bold" style="font-size: 11px;">TOTAL SUPPLIER PAYABLES (DENE HAIN)</small>
+                <h4 class="fw-bold text-warning mb-0" id="duesGrandSupp">Rs. 0</h4>
+              </div>
+            </div>
+            <div class="col-12 col-md-4" id="dueCardNetBox">
+              <div class="card card-stat p-3 bg-white border-start border-primary border-4">
+                <small class="text-muted fw-bold" style="font-size: 11px;">NET OVERALL MARKET BALANCE</small>
+                <h4 class="fw-bold text-primary mb-0" id="duesGrandNet">Rs. 0</h4>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6" id="duesCustColumn">
               <div class="card card-stat p-3 bg-white">
-                <h6 class="fw-bold text-warning mb-2">Supplier Dues List</h6>
-                <div class="table-responsive"><table class="table table-striped table-bordered text-center" style="font-size: 13px;"><thead class="table-dark"><tr><th>Supplier</th><th>Net Payable</th></tr></thead><tbody id="supplierDuesBody"></tbody></table></div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold text-danger mb-0"><i class="fa-solid fa-users me-1"></i> Customer Dues List</h6>
+                  <span class="badge bg-danger" id="custCountBadge">0 Parties</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-striped table-bordered text-center align-middle" style="font-size: 13px;">
+                    <thead class="table-dark"><tr><th>Customer Name</th><th>Net Due</th><th>Action</th></tr></thead>
+                    <tbody id="customerDuesBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6" id="duesSuppColumn">
+              <div class="card card-stat p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold text-warning mb-0"><i class="fa-solid fa-truck me-1"></i> Supplier Payables List</h6>
+                  <span class="badge bg-warning text-dark" id="suppCountBadge">0 Parties</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-striped table-bordered text-center align-middle" style="font-size: 13px;">
+                    <thead class="table-dark"><tr><th>Supplier Name</th><th>Net Payable</th><th>Action</th></tr></thead>
+                    <tbody id="supplierDuesBody"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -331,6 +487,7 @@
   </div>
 </div>
 
+<!-- ENTRY MODAL & OTHER DIALOGS -->
 <div class="modal fade" id="entryModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -470,6 +627,7 @@
   let currentBillBase64 = "";
   let currentOpeningBase64 = "";
   let mainChart = null, methodChart = null;
+  let cachedAdminUsersList = [];
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("entryDate").value = new Date().toISOString().split('T')[0];
@@ -501,13 +659,18 @@
     }
   }
 
-  function toggleAuth(isRegister) {
-    if(isRegister) {
-      document.getElementById("loginForm").classList.add("d-none");
+  function toggleAuth(mode) {
+    document.getElementById("loginForm").classList.add("d-none");
+    document.getElementById("registerForm").classList.add("d-none");
+    document.getElementById("forgotForm").classList.add("d-none");
+
+    if(mode === 'register') {
       document.getElementById("registerForm").classList.remove("d-none");
       document.getElementById("authTitle").innerText = "Create Business Account";
+    } else if(mode === 'forgot') {
+      document.getElementById("forgotForm").classList.remove("d-none");
+      document.getElementById("authTitle").innerText = "Forgot Password Assistance";
     } else {
-      document.getElementById("registerForm").classList.add("d-none");
       document.getElementById("loginForm").classList.remove("d-none");
       document.getElementById("authTitle").innerText = "Sign in with Unique Phone Number";
     }
@@ -534,12 +697,33 @@
         btn.disabled = false;
         return;
       }
-      alert("Account register ho gaya hai! Super Admin permission ke baad login hoga.");
-      toggleAuth(false);
+      toggleAuth('login');
+      new bootstrap.Modal(document.getElementById('regSuccessModal')).show();
     } catch(err) {
       alert("Server Connection Error!");
     }
     btn.disabled = false;
+  }
+
+  async function handleForgotRequest(e) {
+    e.preventDefault();
+    let phone = document.getElementById("forgotPhone").value.trim();
+    try {
+      let res = await fetch('/api/forgot-password-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      let data = await res.json();
+      if(data.success) {
+        alert("Aapki request submit ho gayi hai! System owner/admin se 03243981059 par raabta karein password reset karwane ke liye.");
+        toggleAuth('login');
+      } else {
+        alert(data.error || "Phone number not found!");
+      }
+    } catch(err) {
+      alert("Error sending request!");
+    }
   }
 
   async function handleLogin(e) {
@@ -599,42 +783,100 @@
       let res = await fetch('/api/admin/get-users');
       let data = await res.json();
       if (data.success) {
-        let users = data.users;
-        document.getElementById("adminTotalUsers").innerText = users.length;
-        let activeCount = users.filter(u => u.isApproved).length;
-        document.getElementById("adminActiveUsers").innerText = activeCount;
+        cachedAdminUsersList = data.users;
+        filterAdminUsers();
+      }
+    } catch(e) {}
+  }
 
-        let tbody = document.getElementById("adminUsersTableBody");
-        let html = "";
+  function filterAdminUsers() {
+    let query = document.getElementById("adminUserSearch").value.trim().toLowerCase();
+    let filterStatus = document.getElementById("adminStatusFilter").value;
 
-        users.forEach(u => {
-          let statusBadge = u.isApproved ? `<span class="badge bg-success">Active Access</span>` : `<span class="badge bg-danger">Access Blocked</span>`;
-          let exp = u.expiryDate ? u.expiryDate : "Lifetime / Pending";
+    let users = cachedAdminUsersList.filter(u => {
+      let matchQuery = u.bizName.toLowerCase().includes(query) || u.phone.includes(query);
+      let matchStatus = true;
+      if (filterStatus === "ACTIVE") matchStatus = u.isApproved === true;
+      if (filterStatus === "HOLD") matchStatus = u.isApproved === false;
+      return matchQuery && matchStatus;
+    });
 
-          html += `
-            <tr>
-              <td><strong>${u.bizName}</strong></td>
-              <td>${u.phone}</td>
-              <td><span class="badge bg-info text-dark">${u.plan || 'No Plan'}</span></td>
-              <td class="fw-bold">${exp}</td>
-              <td>${statusBadge}</td>
-              <td>
-                <select class="form-select form-select-sm d-inline-block w-auto me-1" id="planSelect_${u.phone}">
-                  <option value="7_7 Days Trial">7 Days Trial</option>
-                  <option value="30_1 Month ($30)">1 Month ($30)</option>
-                  <option value="90_3 Months ($70)">3 Months ($70)</option>
-                  <option value="180_6 Months ($120)">6 Months ($120)</option>
-                  <option value="365_1 Year ($200)">1 Year ($200)</option>
-                  <option value="3650_10 Years Lifetime">10 Years Lifetime</option>
-                </select>
-                <button class="btn btn-sm btn-success fw-bold me-1" onclick="approveUserPlan('${u.phone}', true)">Approve</button>
-                <button class="btn btn-sm btn-danger fw-bold" onclick="approveUserPlan('${u.phone}', false)">Block</button>
-              </td>
-            </tr>
-          `;
-        });
+    document.getElementById("adminTotalUsers").innerText = cachedAdminUsersList.length;
+    document.getElementById("adminActiveUsers").innerText = cachedAdminUsersList.filter(u => u.isApproved).length;
+    document.getElementById("adminPendingUsers").innerText = cachedAdminUsersList.filter(u => !u.isApproved).length;
+    document.getElementById("adminForgotCount").innerText = cachedAdminUsersList.filter(u => u.forgotRequested).length;
 
-        tbody.innerHTML = html || `<tr><td colspan="6" class="text-muted">No users registered yet.</td></tr>`;
+    let tbody = document.getElementById("adminUsersTableBody");
+    let html = "";
+
+    users.forEach(u => {
+      let statusBadge = u.isApproved ? `<span class="badge bg-success">Active Access</span>` : `<span class="badge bg-danger">Hold / Blocked</span>`;
+      let forgotBadge = u.forgotRequested ? `<br><span class="badge bg-warning text-dark mt-1"><i class="fa-solid fa-key me-1"></i> Reset Requested</span>` : '';
+      let exp = u.expiryDate ? u.expiryDate : "Lifetime / Pending";
+
+      html += `
+        <tr>
+          <td><strong>${u.bizName}</strong>${forgotBadge}</td>
+          <td class="fw-bold">${u.phone}</td>
+          <td>
+            <span class="badge bg-dark">${u.pass || '***'}</span>
+            <button class="btn btn-sm btn-outline-secondary py-0 ms-1" onclick="openResetPassModal('${u.phone}')"><i class="fa-solid fa-pen-to-square"></i></button>
+          </td>
+          <td>
+            <span class="badge bg-info text-dark mb-1">${u.plan || 'No Plan'}</span><br>
+            <small class="fw-bold text-secondary">${exp}</small>
+          </td>
+          <td>
+            <input type="date" class="form-control form-control-sm" id="customExpDate_${u.phone}" value="${u.expiryDate ? u.expiryDate : ''}">
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm" id="adminNote_${u.phone}" placeholder="Add Note" value="${u.adminNote || ''}">
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="mb-1">
+              <select class="form-select form-select-sm d-inline-block w-auto me-1" id="planSelect_${u.phone}">
+                <option value="CUSTOM_CUSTOM DATE">Use Calendar Date</option>
+                <option value="7_7 Days Trial">7 Days Trial</option>
+                <option value="30_1 Month ($30)">1 Month ($30)</option>
+                <option value="90_3 Months ($70)">3 Months ($70)</option>
+                <option value="365_1 Year ($200)">1 Year ($200)</option>
+                <option value="3650_10 Years Lifetime">10 Years Lifetime</option>
+              </select>
+            </div>
+            <button class="btn btn-sm btn-success fw-bold me-1 py-1" onclick="approveUserPlan('${u.phone}', true)"><i class="fa-solid fa-check"></i> Approve</button>
+            <button class="btn btn-sm btn-danger fw-bold py-1" onclick="approveUserPlan('${u.phone}', false)"><i class="fa-solid fa-pause"></i> Hold</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html || `<tr><td colspan="8" class="text-muted">No users found.</td></tr>`;
+  }
+
+  function openResetPassModal(phone) {
+    document.getElementById("resetUserPhoneTarget").value = phone;
+    document.getElementById("resetUserPhoneDisplay").value = phone;
+    document.getElementById("resetUserNewPass").value = "";
+    new bootstrap.Modal(document.getElementById("adminResetPassModal")).show();
+  }
+
+  async function submitUserPasswordChange() {
+    let targetPhone = document.getElementById("resetUserPhoneTarget").value;
+    let newPass = document.getElementById("resetUserNewPass").value.trim();
+    if(!newPass) return alert("Enter new password!");
+
+    try {
+      let res = await fetch('/api/admin/reset-user-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPhone, newPass })
+      });
+      let data = await res.json();
+      if(data.success) {
+        alert("User Password successfully updated!");
+        bootstrap.Modal.getInstance(document.getElementById("adminResetPassModal")).hide();
+        loadAdminUsersList();
       }
     } catch(e) {}
   }
@@ -642,6 +884,9 @@
   async function approveUserPlan(phone, isApproved) {
     let sel = document.getElementById(`planSelect_${phone}`);
     let val = sel ? sel.value : "30_1 Month ($30)";
+    let customDate = document.getElementById(`customExpDate_${phone}`).value;
+    let adminNote = document.getElementById(`adminNote_${phone}`).value;
+
     let parts = val.split('_');
     let days = Number(parts[0]);
     let planName = parts[1];
@@ -650,7 +895,7 @@
       let res = await fetch('/api/admin/update-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetPhone: phone, isApproved, days, planName })
+        body: JSON.stringify({ targetPhone: phone, isApproved, days, planName, customDate, adminNote })
       });
       let data = await res.json();
       if (data.success) {
@@ -1275,6 +1520,7 @@
   }
 
   function renderDuesLists() {
+    let filterVal = document.getElementById("duesFilterSelect") ? document.getElementById("duesFilterSelect").value : "ALL";
     let custMap = {}, suppMap = {};
 
     userParties.forEach(p => {
@@ -1295,17 +1541,77 @@
     });
 
     let custHtml = "", suppHtml = "";
+    let grandCust = 0, grandSupp = 0, custCount = 0, suppCount = 0;
+
     for (let c in custMap) {
       let net = custMap[c].total - custMap[c].paid;
-      custHtml += `<tr><td>${c}</td><td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td></tr>`;
-    }
-    for (let s in suppMap) {
-      let net = suppMap[s].total - suppMap[s].paid;
-      suppHtml += `<tr><td>${s}</td><td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td></tr>`;
+      if (net !== 0) {
+        grandCust += net;
+        custCount++;
+        let safeC = c.replace(/'/g, "\\'");
+        custHtml += `
+          <tr>
+            <td class="fw-bold text-start ps-2">${c}</td>
+            <td class="fw-bold text-danger">Rs. ${net.toLocaleString()}</td>
+            <td><button class="btn btn-sm btn-outline-primary py-0 fw-bold" style="font-size:11px;" onclick="viewPartyLedger('${safeC}', 'Customer')">View</button></td>
+          </tr>
+        `;
+      }
     }
 
-    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
-    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="2" class="text-muted">No Data</td></tr>`;
+    for (let s in suppMap) {
+      let net = suppMap[s].total - suppMap[s].paid;
+      if (net !== 0) {
+        grandSupp += net;
+        suppCount++;
+        let safeS = s.replace(/'/g, "\\'");
+        suppHtml += `
+          <tr>
+            <td class="fw-bold text-start ps-2">${s}</td>
+            <td class="fw-bold text-warning">Rs. ${net.toLocaleString()}</td>
+            <td><button class="btn btn-sm btn-outline-primary py-0 fw-bold" style="font-size:11px;" onclick="viewPartyLedger('${safeS}', 'Supplier')">View</button></td>
+          </tr>
+        `;
+      }
+    }
+
+    let grandNet = grandCust - grandSupp;
+
+    document.getElementById("duesGrandCust").innerText = "Rs. " + grandCust.toLocaleString();
+    document.getElementById("duesGrandSupp").innerText = "Rs. " + grandSupp.toLocaleString();
+    document.getElementById("duesGrandNet").innerText = "Rs. " + grandNet.toLocaleString();
+
+    document.getElementById("custCountBadge").innerText = custCount + " Parties";
+    document.getElementById("suppCountBadge").innerText = suppCount + " Parties";
+
+    document.getElementById("customerDuesBody").innerHTML = custHtml || `<tr><td colspan="3" class="text-muted">No Customer Dues</td></tr>`;
+    document.getElementById("supplierDuesBody").innerHTML = suppHtml || `<tr><td colspan="3" class="text-muted">No Supplier Payables</td></tr>`;
+
+    let custCol = document.getElementById("duesCustColumn");
+    let suppCol = document.getElementById("duesSuppColumn");
+    let custBox = document.getElementById("dueCardCustBox");
+    let suppBox = document.getElementById("dueCardSuppBox");
+
+    if (filterVal === "Customer") {
+      custCol.className = "col-12";
+      custCol.classList.remove("d-none");
+      suppCol.classList.add("d-none");
+      custBox.classList.remove("d-none");
+      suppBox.classList.add("d-none");
+    } else if (filterVal === "Supplier") {
+      suppCol.className = "col-12";
+      suppCol.classList.remove("d-none");
+      custCol.classList.add("d-none");
+      suppBox.classList.remove("d-none");
+      custBox.classList.add("d-none");
+    } else {
+      custCol.className = "col-12 col-md-6";
+      suppCol.className = "col-12 col-md-6";
+      custCol.classList.remove("d-none");
+      suppCol.classList.remove("d-none");
+      custBox.classList.remove("d-none");
+      suppBox.classList.remove("d-none");
+    }
   }
 
   function searchPartyLedger() {
@@ -1428,6 +1734,10 @@
   }
 
   function exportSinglePartyPDF(partyName) {
+    if (typeof window.jspdf === 'undefined') {
+      alert("jsPDF library load ho rahi hai, 2 second baad try karein!");
+      return;
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
