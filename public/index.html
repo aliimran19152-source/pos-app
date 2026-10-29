@@ -43,7 +43,7 @@
       <div class="mb-3">
         <label class="form-label small fw-bold">Password</label>
         <div class="pwd-wrapper">
-          <input type="password" id="loginPass" class="form-control" placeholder="******" required>
+          <input type="password" id="loginPass" class="form-control" placeholder="******" required minlength="6">
           <i class="fa-solid fa-eye pwd-toggle" id="toggleLoginPass" onclick="togglePasswordVisibility('loginPass', 'toggleLoginPass')"></i>
         </div>
       </div>
@@ -71,11 +71,12 @@
         <input type="text" id="regPhone" class="form-control" placeholder="03001234567" required>
       </div>
       <div class="mb-2">
-        <label class="form-label small fw-bold">Password</label>
+        <label class="form-label small fw-bold">Password (Min 6 Characters)</label>
         <div class="pwd-wrapper">
-          <input type="password" id="regPass" class="form-control" placeholder="******" required>
+          <input type="password" id="regPass" class="form-control" placeholder="At least 6 digits/chars" required minlength="6">
           <i class="fa-solid fa-eye pwd-toggle" id="toggleRegPass" onclick="togglePasswordVisibility('regPass', 'toggleRegPass')"></i>
         </div>
+        <small class="text-muted" style="font-size:11px;">Password kam az kam 6 digits ka hona chahiye.</small>
       </div>
       <button type="submit" id="regBtn" class="btn btn-success w-100 fw-bold py-2 mb-2">Create Account</button>
       <div class="text-center">
@@ -207,7 +208,7 @@
       <div class="card card-stat p-3 bg-white">
         <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-key me-2"></i>Update Admin Password</h6>
         <div class="input-group input-group-sm mb-2">
-          <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password">
+          <input type="password" id="newAdminPass" class="form-control" placeholder="New Admin Password (Min 6 chars)" minlength="6">
           <button class="btn btn-danger fw-bold" onclick="updateAdminPass()">Change Password</button>
         </div>
       </div>
@@ -230,8 +231,8 @@
           <input type="text" id="resetUserPhoneDisplay" class="form-control" readonly>
         </div>
         <div class="mb-3">
-          <label class="form-label small fw-bold">New Password For User</label>
-          <input type="text" id="resetUserNewPass" class="form-control" placeholder="Enter new password" required>
+          <label class="form-label small fw-bold">New Password For User (Min 6 Digits)</label>
+          <input type="text" id="resetUserNewPass" class="form-control" placeholder="Enter at least 6 digits" required minlength="6">
         </div>
         <button type="button" class="btn btn-success w-100 fw-bold" onclick="submitUserPasswordChange()">Update Password</button>
       </div>
@@ -239,7 +240,7 @@
   </div>
 </div>
 
-<!-- MAIN CLIENT POS APP (UNTOUCHED CORE) -->
+<!-- MAIN CLIENT POS APP -->
 <div id="mainApp" class="container-fluid d-none p-0">
   <nav class="navbar navbar-dark mobile-header d-md-none sticky-top">
     <div class="container-fluid">
@@ -685,6 +686,12 @@
     let pass = document.getElementById("regPass").value.trim();
     let bizName = document.getElementById("regBizName").value.trim() || "My Shop";
 
+    if (pass.length < 6) {
+      alert("Password kam az kam 6 digits/characters ka hona zaroori hai!");
+      btn.disabled = false;
+      return;
+    }
+
     try {
       let res = await fetch('/api/register', {
         method: 'POST',
@@ -716,7 +723,7 @@
       });
       let data = await res.json();
       if(data.success) {
-        alert("Aapki request submit ho gayi hai! System owner/admin se 03243981059 par raabta karein password reset karwane ke liye.");
+        alert("Aapki request submit ho gaya hai! System owner/admin se 03243981059 par raabta karein password reset karwane ke liye.");
         toggleAuth('login');
       } else {
         alert(data.error || "Phone number not found!");
@@ -734,6 +741,12 @@
     let phoneInput = document.getElementById("loginPhone").value.trim();
     let passInput = document.getElementById("loginPass").value.trim();
     let remember = document.getElementById("rememberMe").checked;
+
+    if (passInput.length < 6) {
+      alert("Password kam az kam 6 characters ka hota hai!");
+      btn.disabled = false;
+      return;
+    }
 
     try {
       let res = await fetch('/api/login', {
@@ -864,7 +877,7 @@
   async function submitUserPasswordChange() {
     let targetPhone = document.getElementById("resetUserPhoneTarget").value;
     let newPass = document.getElementById("resetUserNewPass").value.trim();
-    if(!newPass) return alert("Enter new password!");
+    if(!newPass || newPass.length < 6) return alert("Password minimum 6 digits/characters ka hona zaroori hai!");
 
     try {
       let res = await fetch('/api/admin/reset-user-pass', {
@@ -907,7 +920,7 @@
 
   async function updateAdminPass() {
     let pass = document.getElementById("newAdminPass").value.trim();
-    if (!pass) return alert("Enter new password!");
+    if (!pass || pass.length < 6) return alert("Admin Password minimum 6 digits/characters ka hona zaroori hai!");
 
     try {
       let res = await fetch('/api/admin/update-password', {
